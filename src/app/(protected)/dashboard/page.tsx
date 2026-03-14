@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ArrowUpRight, ArrowDownRight, Activity, CreditCard, Sparkles, Clock } from "lucide-react";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
+import ValueChart from "@/components/dashboard/ValueChart";
 
 // Dummy data for the time being since the database isn't hooked up yet
 const RECENT_ACTIVITY = [
@@ -96,13 +97,8 @@ export default function DashboardPage() {
               <option>All Time</option>
             </select>
           </div>
-          <div className="flex-1 min-h-[300px] border border-dashed border-gray-800 rounded-lg flex flex-col items-center justify-center gap-3 bg-vault-900/50">
-             {/* 
-                We will replace this placeholder with a Recharts component once the package is successfully installed.
-             */}
-             <Activity className="w-8 h-8 text-gold-500/30 mb-2" />
-             <p className="text-gray-500 uppercase tracking-widest text-sm">Chart Data Loading</p>
-             <p className="text-gray-600 text-xs">(Requires Recharts installation)</p>
+          <div className="flex-1 min-h-[300px] border border-dashed border-gray-800 rounded-lg flex flex-col items-center justify-center p-4 bg-vault-900/50 relative">
+             <ValueChart />
           </div>
         </div>
 
