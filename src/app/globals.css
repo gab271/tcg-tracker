@@ -1,26 +1,47 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Colors */
+  --color-vault-900: #0f1115;
+  --color-vault-800: #16191f;
+  --color-vault-700: #1c2028;
+  --color-gold-500: #d4af37;
+  --color-gold-400: #e5c048;
+  --color-gold-300: #f6d159;
+  
+  /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: var(--color-vault-900);
+  --foreground: #f3f4f6;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom utilities */
+@utility text-gold-gradient {
+  background: linear-gradient(135deg, var(--color-gold-300), var(--color-gold-500));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@utility bg-gold-gradient {
+  background: linear-gradient(135deg, var(--color-gold-300), var(--color-gold-500));
+}
+
+@utility vault-border {
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+@utility vault-glow {
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
 }
