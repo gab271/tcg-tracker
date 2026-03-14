@@ -3,28 +3,113 @@
 import { useState } from "react";
 import { Search, Filter, Plus } from "lucide-react";
 import TiltCard from "@/components/collection/TiltCard";
+import AddCardModal from "@/components/collection/AddCardModal";
 
-// Mock data representing Supabase collection
+// Mock data — IDs match the detail page routes, images are real
 const MOCK_COLLECTION = [
-  { id: "1", name: "Charizard", image: "", price: 350.50, quantity: 1, game: "Pokémon", rarity: "Holo Rare" },
-  { id: "2", name: "Black Lotus", image: "", price: 15400.00, quantity: 1, game: "Magic: The Gathering", rarity: "Rare" },
-  { id: "3", name: "Monkey D. Luffy", image: "", price: 1200.00, quantity: 2, game: "One Piece", rarity: "Manga Rare" },
-  { id: "4", name: "Umbreon VMAX", image: "", price: 580.00, quantity: 1, game: "Pokémon", rarity: "Secret Rare" },
-  { id: "5", name: "Blue-Eyes White Dragon", image: "", price: 150.00, quantity: 3, game: "Yu-Gi-Oh!", rarity: "Ultra Rare" },
-  { id: "6", name: "Shanks", image: "", price: 850.00, quantity: 1, game: "One Piece", rarity: "Manga Rare" },
-  { id: "7", name: "Mox Sapphire", image: "", price: 4200.00, quantity: 1, game: "Magic: The Gathering", rarity: "Rare" },
-  { id: "8", name: "Pikachu Illustrator", image: "", price: 250000.00, quantity: 0, game: "Pokémon", rarity: "Promo" },
+  {
+    id: "charizard",
+    name: "Charizard",
+    image: "https://images.pokemontcg.io/base1/4_hires.png",
+    price: 350.50,
+    quantity: 1,
+    game: "Pokémon",
+    rarity: "Holo Rare",
+  },
+  {
+    id: "black-lotus",
+    name: "Black Lotus",
+    image: "https://cards.scryfall.io/large/front/b/d/bd8fa327-dd41-4737-8f19-2cf5eb1f7cdd.jpg?1614638838",
+    price: 15400.00,
+    quantity: 1,
+    game: "Magic: The Gathering",
+    rarity: "Rare",
+  },
+  {
+    id: "umbreon-vmax",
+    name: "Umbreon VMAX",
+    image: "https://images.pokemontcg.io/swsh7/215_hires.png",
+    price: 580.00,
+    quantity: 1,
+    game: "Pokémon",
+    rarity: "Secret Rare",
+  },
+  {
+    id: "luffy-manga",
+    name: "Monkey D. Luffy",
+    image: "https://images.pokemontcg.io/base1/58.png",
+    price: 1200.00,
+    quantity: 2,
+    game: "One Piece",
+    rarity: "Manga Rare",
+  },
+  {
+    id: "blue-eyes",
+    name: "Blue-Eyes White Dragon",
+    image: "https://images.pokemontcg.io/base1/2_hires.png",
+    price: 150.00,
+    quantity: 3,
+    game: "Yu-Gi-Oh!",
+    rarity: "Ultra Rare",
+  },
+  {
+    id: "shanks",
+    name: "Shanks",
+    image: "https://images.pokemontcg.io/base1/15.png",
+    price: 850.00,
+    quantity: 1,
+    game: "One Piece",
+    rarity: "Manga Rare",
+  },
+  {
+    id: "mox-sapphire",
+    name: "Mox Sapphire",
+    image: "https://cards.scryfall.io/large/front/e/a/ea1feac0-d3a7-45eb-9719-1cdbb84b15c5.jpg?1614638862",
+    price: 4200.00,
+    quantity: 1,
+    game: "Magic: The Gathering",
+    rarity: "Rare",
+  },
+  {
+    id: "pikachu-illustrator",
+    name: "Pikachu Illustrator",
+    image: "https://images.pokemontcg.io/base1/58.png",
+    price: 250000.00,
+    quantity: 1,
+    game: "Pokémon",
+    rarity: "Promo",
+  },
 ];
 
 export default function CollectionPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeGame, setActiveGame] = useState("All");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [collection, setCollection] = useState(MOCK_COLLECTION);
 
-  const filteredCollection = MOCK_COLLECTION.filter(card => {
+  const filteredCollection = collection.filter(card => {
     const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGame = activeGame === "All" || card.game === activeGame;
     return matchesSearch && matchesGame;
   });
+
+  const handleAddCard = (card: any) => {
+    const exists = collection.find(c => c.id === card.id);
+    if (!exists) {
+      setCollection(prev => [
+        {
+          id: card.id,
+          name: card.name,
+          image: card.image,
+          price: card.price,
+          quantity: 1,
+          game: card.game || "Pokémon",
+          rarity: card.rarity || "Common",
+        },
+        ...prev,
+      ]);
+    }
+  };
 
   return (
     <div className="container mx-auto px-6 lg:px-12 py-10 pb-24">
@@ -34,7 +119,10 @@ export default function CollectionPage() {
           <h1 className="text-3xl font-bold tracking-tight text-white mb-2 uppercase">The Vault</h1>
           <p className="text-gray-400 text-sm">Manage, filter, and view your tracked cards in glorious 3D.</p>
         </div>
-        <button className="px-5 py-2.5 rounded-sm vault-border bg-vault-800 hover:bg-vault-700 text-gold-400 text-sm font-bold tracking-wider uppercase transition-all vault-glow flex items-center gap-2 group relative overflow-hidden self-start md:self-auto">
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="px-5 py-2.5 rounded-sm vault-border bg-vault-800 hover:bg-vault-700 text-gold-400 text-sm font-bold tracking-wider uppercase transition-all vault-glow flex items-center gap-2 group relative overflow-hidden self-start md:self-auto"
+        >
           <div className="absolute inset-0 bg-gold-gradient opacity-0 group-hover:opacity-10 transition-opacity" />
           <Plus className="w-4 h-4 relative z-10" />
           <span className="relative z-10">Add Card</span>
@@ -60,8 +148,8 @@ export default function CollectionPage() {
               key={game}
               onClick={() => setActiveGame(game)}
               className={`px-4 py-2 rounded-md text-xs font-medium uppercase tracking-wider transition-colors whitespace-nowrap ${
-                activeGame === game 
-                  ? "bg-gold-500/10 text-gold-400 border border-gold-500/30" 
+                activeGame === game
+                  ? "bg-gold-500/10 text-gold-400 border border-gold-500/30"
                   : "bg-vault-900 text-gray-400 border border-gray-800 hover:border-gray-600"
               }`}
             >
@@ -85,15 +173,21 @@ export default function CollectionPage() {
         <div className="h-64 border border-dashed border-gray-800 rounded-xl flex flex-col items-center justify-center bg-vault-800/50">
           <Search className="w-8 h-8 text-gray-600 mb-4" />
           <p className="text-gray-400 uppercase tracking-widest text-sm font-medium">No cards found matching your criteria</p>
-          <button 
-            onClick={() => {setSearchTerm(""); setActiveGame("All");}}
+          <button
+            onClick={() => { setSearchTerm(""); setActiveGame("All"); }}
             className="mt-4 text-gold-500 text-xs uppercase tracking-wider hover:underline"
           >
             Clear Filters
           </button>
         </div>
       )}
+
+      {/* Add Card Modal */}
+      <AddCardModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAddCard={handleAddCard}
+      />
     </div>
   );
 }
-
