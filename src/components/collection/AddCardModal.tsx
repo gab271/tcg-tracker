@@ -41,7 +41,8 @@ export default function AddCardModal({ isOpen, onClose, onAddCard }: AddCardModa
     timeoutRef.current = setTimeout(async () => {
       try {
         // Querying Pokemon TCG API
-        const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"*${searchTerm}*"&pageSize=20`);
+        const query = encodeURIComponent(`name:"*${searchTerm}*"`);
+        const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=${query}&pageSize=20`);
         const data = await res.json();
         
         if (data && data.data) {

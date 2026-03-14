@@ -1,19 +1,28 @@
-export default function DecksPage() {
-  return (
-    <div className="container mx-auto px-6 lg:px-12 py-12">
-      <div className="flex justify-between items-center mb-10">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight text-white mb-2 uppercase">Decks</h1>
-          <p className="text-gray-400">Build and manage your competitive decks.</p>
-        </div>
-        <button className="px-5 py-2.5 rounded-sm vault-border bg-vault-800 hover:bg-vault-700 text-gold-400 text-sm font-medium tracking-wider uppercase transition-all vault-glow">
-          Create Deck
-        </button>
-      </div>
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import DecksClient from '@/components/decks/DecksClient';
 
-      <div className="h-64 border border-dashed border-gray-800 rounded-xl flex items-center justify-center">
-        <p className="text-gray-500 uppercase tracking-widest text-sm">No decks created yet</p>
-      </div>
-    </div>
-  );
+export default async function DecksPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/api/auth');
+  }
+
+  // Fetch decks and count their cards
+  const { data: decks, error } = await supabase
+    .from('decks')
+    .select(`
+      *,
+      deck_cards (count)
+    `)
+    .order('created_at', { ascending: false });
+
+  const formattedDecks = decks?.map((deck) => ({
+    ...deck,
+    card_count: deck.deck_cards?.[0]?.count || 0
+  })) || [];
+
+  return <DecksClient initialDecks={formattedDecks} />;
 }
