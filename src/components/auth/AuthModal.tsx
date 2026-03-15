@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Mail, Lock, Loader2, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -10,10 +10,22 @@ import Image from "next/image";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultMode?: 'login' | 'register';
 }
 
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const [isLogin, setIsLogin] = useState(true);
+export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) {
+  const [isLogin, setIsLogin] = useState(defaultMode === 'login');
+
+  // Update isLogin when defaultMode changes or modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setIsLogin(defaultMode === 'login');
+      setError(null);
+      setEmail("");
+      setPassword("");
+    }
+  }, [isOpen, defaultMode]);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);

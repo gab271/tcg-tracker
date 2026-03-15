@@ -18,8 +18,11 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [user, setUser] = useState<any>(null);
-  
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
   const pathname = usePathname();
   const supabase = createClient();
 
@@ -35,12 +38,14 @@ export default function Navbar() {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      setIsLoadingAuth(false);
     };
     
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setIsLoadingAuth(false);
     });
 
     return () => subscription.unsubscribe();
@@ -73,73 +78,124 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            {user && (
-              <Link
-                href="/dashboard"
-                className={`relative py-2 text-sm font-medium tracking-wider uppercase transition-colors ${
-                  pathname === "/dashboard" ? "text-white" : "text-gray-400 hover:text-white"
-                }`}
-              >
-                Dashboard
-                {pathname === "/dashboard" && (
-                  <motion.div
-                    layoutId="active-nav-indicator"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-gradient"
-                  />
-                )}
-              </Link>
-            )}
-            {NAV_LINKS.map((link) => {
-              const isActive = pathname === link.path;
-              return (
+            {isLoadingAuth ? (
+               <div className="w-64 h-6 bg-vault-800/20 animate-pulse rounded"></div>
+            ) : user ? (
+              <>
                 <Link
-                  key={link.name}
-                  href={link.path}
+                  href="/dashboard"
                   className={`relative py-2 text-sm font-medium tracking-wider uppercase transition-colors ${
-                    isActive ? "text-white" : "text-gray-400 hover:text-white"
+                    pathname === "/dashboard" ? "text-white" : "text-gray-400 hover:text-white"
                   }`}
                 >
-                  {link.name}
-                  {isActive && (
+                  Dashboard
+                  {pathname === "/dashboard" && (
                     <motion.div
                       layoutId="active-nav-indicator"
                       className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-gradient"
                     />
                   )}
                 </Link>
-              );
-            })}
+                {NAV_LINKS.map((link) => {
+                  const isActive = pathname === link.path;
+                  return (
+                    <Link
+                      key={link.name}
+                      href={link.path}
+                      className={`relative py-2 text-sm font-medium tracking-wider uppercase transition-colors ${
+                        isActive ? "text-white" : "text-gray-400 hover:text-white"
+                      }`}
+                    >
+                      {link.name}
+                      {isActive && (
+                        <motion.div
+                          layoutId="active-nav-indicator"
+                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-gradient"
+                        />
+                      )}
+                    </Link>
+                  );
+                })}
+              </>
+            ) : null}
           </nav>
 
           {/* Auth / Action */}
           <div className="hidden md:flex items-center gap-4">
-            {user ? (
+            {isLoadingAuth ? (
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-sm bg-vault-800 border vault-border flex items-center justify-center overflow-hidden vault-glow shadow-[0_0_10px_rgba(212,175,55,0.2)]">
+                <div className="w-16 h-8 bg-vault-800/50 animate-pulse rounded"></div>
+                <div className="w-32 h-10 bg-vault-800/50 animate-pulse rounded-sm"></div>
+              </div>
+            ) : user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-10 h-10 rounded-full bg-vault-800 border vault-border flex items-center justify-center overflow-hidden vault-glow shadow-[0_0_10px_rgba(212,175,55,0.2)] focus:outline-none"
+                >
                   {user.user_metadata?.avatar_url ? (
                     <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <User className="w-5 h-5 text-gold-400" />
+                    <span className="text-gold-400 font-bold uppercase">
+                      {user.email ? user.email.charAt(0) : "U"}
+                    </span>
                   )}
-                </div>
-                <button
-                  onClick={handleSignOut}
-                  className="p-2 text-gray-400 hover:text-red-400 transition-colors"
-                  aria-label="Sign Out"
-                >
-                  <LogOut className="w-5 h-5" />
                 </button>
+                
+                <AnimatePresence>
+                  {isDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute right-0 mt-2 w-48 bg-vault-900 border vault-border rounded-md shadow-xl py-1 z-50"
+                    >
+                      <div className="px-4 py-3 border-b border-gray-800">
+                        <p className="text-sm text-white truncate">{user.email}</p>
+                      </div>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="block px-4 py-2 text-sm text-gray-300 hover:text-gold-400 hover:bg-vault-800 transition-colors"
+                      >
+                        Profile
+                      </Link>
+                      <Link
+                        href="/settings"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="block px-4 py-2 text-sm text-gray-300 hover:text-gold-400 hover:bg-vault-800 transition-colors"
+                      >
+                        Settings
+                      </Link>
+                      <button
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          handleSignOut();
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-vault-800 transition-colors"
+                      >
+                        Sign Out
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               <>
                 <button
-                  onClick={() => setIsAuthOpen(true)}
+                  onClick={() => {
+                    setAuthMode('login');
+                    setIsAuthOpen(true);
+                  }}
                   className="text-sm font-medium tracking-wider uppercase text-gray-300 hover:text-gold-400 transition-colors"
                 >
                   Sign In
                 </button>
                 <button
-                  onClick={() => setIsAuthOpen(true)}
+                  onClick={() => {
+                    setAuthMode('register');
+                    setIsAuthOpen(true);
+                  }}
                   className="px-5 py-2.5 rounded-sm vault-border bg-vault-800 hover:bg-vault-700 text-gold-400 text-sm font-medium tracking-wider uppercase transition-all vault-glow hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] relative overflow-hidden group"
                 >
                   <span className="relative z-10">Vault Access</span>
@@ -169,37 +225,52 @@ export default function Navbar() {
               className="fixed inset-0 top-[73px] bg-vault-900 border-t vault-border md:hidden z-40 p-6 flex flex-col gap-8 h-[calc(100vh-73px)] overflow-y-auto"
             >
               <nav className="flex flex-col gap-6">
-                {user && (
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-xl font-medium tracking-wider uppercase text-gray-300 hover:text-gold-400 transition-colors"
-                  >
-                    Dashboard
-                  </Link>
-                )}
-                {NAV_LINKS.map((link) => (
-                  <Link
-                    key={link.name}
-                    href={link.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-xl font-medium tracking-wider uppercase text-gray-300 hover:text-gold-400 transition-colors"
-                  >
-                    {link.name}
-                  </Link>
-                ))}
+                {isLoadingAuth ? (
+                  <div className="flex flex-col gap-6">
+                    <div className="w-32 h-6 bg-vault-800/50 animate-pulse rounded"></div>
+                    <div className="w-40 h-6 bg-vault-800/50 animate-pulse rounded"></div>
+                    <div className="w-32 h-6 bg-vault-800/50 animate-pulse rounded"></div>
+                  </div>
+                ) : user ? (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-xl font-medium tracking-wider uppercase text-gray-300 hover:text-gold-400 transition-colors"
+                    >
+                      Dashboard
+                    </Link>
+                    {NAV_LINKS.map((link) => (
+                      <Link
+                        key={link.name}
+                        href={link.path}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="text-xl font-medium tracking-wider uppercase text-gray-300 hover:text-gold-400 transition-colors"
+                      >
+                        {link.name}
+                      </Link>
+                    ))}
+                  </>
+                ) : null}
               </nav>
 
               <div className="mt-auto pt-8">
                 <div className="h-px w-full vault-border border-b opacity-50 mb-8" />
-                {user ? (
+                {isLoadingAuth ? (
+                  <div className="flex flex-col gap-6 items-center">
+                    <div className="w-full h-16 bg-vault-800/50 animate-pulse rounded-sm"></div>
+                    <div className="w-full h-12 bg-vault-800/50 animate-pulse rounded-sm"></div>
+                  </div>
+                ) : user ? (
                   <div className="flex flex-col gap-6 items-center">
                     <div className="flex items-center gap-4 bg-vault-800 w-full p-4 rounded-sm vault-border">
-                      <div className="w-12 h-12 rounded-sm border border-gold-500/30 flex items-center justify-center overflow-hidden">
+                      <div className="w-12 h-12 rounded-full border border-gold-500/30 flex items-center justify-center overflow-hidden">
                         {user.user_metadata?.avatar_url ? (
                           <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
-                          <User className="w-6 h-6 text-gold-400" />
+                          <span className="text-gold-400 font-bold uppercase text-lg">
+                            {user.email ? user.email.charAt(0) : "U"}
+                          </span>
                         )}
                       </div>
                       <div className="flex flex-col">
@@ -221,6 +292,7 @@ export default function Navbar() {
                   <div className="flex flex-col gap-4">
                     <button
                       onClick={() => {
+                        setAuthMode('login');
                         setIsAuthOpen(true);
                         setMobileMenuOpen(false);
                       }}
@@ -230,6 +302,7 @@ export default function Navbar() {
                     </button>
                     <button
                       onClick={() => {
+                        setAuthMode('register');
                         setIsAuthOpen(true);
                         setMobileMenuOpen(false);
                       }}
@@ -245,7 +318,11 @@ export default function Navbar() {
         </AnimatePresence>
       </header>
 
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <AuthModal 
+        isOpen={isAuthOpen} 
+        onClose={() => setIsAuthOpen(false)} 
+        defaultMode={authMode}
+      />
     </>
   );
 }
