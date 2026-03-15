@@ -1,6 +1,10 @@
-'use client';
+const fs = require('fs');
 
-import { useState, useMemo, useEffect } from 'react';
+const deckPath = 'src/components/decks/DecksClient.tsx';
+
+const newDeckClient = `'use client';
+
+import { useState, useMemo } from 'react';
 import { DeckCard } from './DeckCard';
 import CreateDeckModal from './CreateDeckModal';
 import Link from 'next/link';
@@ -8,43 +12,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const TABS = ['All', 'Pokémon', 'Magic: The Gathering', 'One Piece', 'Yu-Gi-Oh!'];
 
-// Custom hook for animating numbers
-function useCountUp(end: number, duration: number = 2) {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    let startTime: number | null = null;
-    let animationFrameId: number;
-
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
-      
-      // easeOutExpo
-      const easeProgress = 1 - Math.pow(1 - progress, 3);
-      
-      setCount(end * easeProgress);
-
-      if (progress < 1) {
-        animationFrameId = requestAnimationFrame(animate);
-      }
-    };
-
-    animationFrameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [end, duration]);
-
-  return count;
-}
-
 export default function DecksClient({ initialDecks, totalValue = 0, totalCards = 0 }: { initialDecks: any[], totalValue?: number, totalCards?: number }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [decks] = useState(initialDecks);
   const [activeTab, setActiveTab] = useState('All');
-
-  const animatedDecks = useCountUp(decks.length);
-  const animatedCards = useCountUp(totalCards);
-  const animatedValue = useCountUp(totalValue);
 
   const filteredDecks = useMemo(() => {
     if (activeTab === 'All') return decks;
@@ -52,7 +23,7 @@ export default function DecksClient({ initialDecks, totalValue = 0, totalCards =
   }, [decks, activeTab]);
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-6">
+    <div className="max-w-7xl mx-auto py-8">
       {/* HEADER SECTION */}
       <div className="mb-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-6">
@@ -64,17 +35,17 @@ export default function DecksClient({ initialDecks, totalValue = 0, totalCards =
             <div className="flex gap-6 text-sm">
               <div className="flex flex-col">
                 <span className="text-gray-500 uppercase tracking-widest text-[10px]">Total Decks</span>
-                <span className="text-xl font-bold font-mono text-white">{Math.round(animatedDecks)}</span>
+                <span className="text-xl font-bold font-mono text-white">{decks.length}</span>
               </div>
               <div className="w-px h-8 bg-gray-800"></div>
               <div className="flex flex-col">
                 <span className="text-gray-500 uppercase tracking-widest text-[10px]">Total Cards</span>
-                <span className="text-xl font-bold font-mono text-white">{Math.round(animatedCards)}</span>
+                <span className="text-xl font-bold font-mono text-white">{totalCards}</span>
               </div>
               <div className="w-px h-8 bg-gray-800"></div>
               <div className="flex flex-col">
                 <span className="text-gray-500 uppercase tracking-widest text-[10px]">Total Value</span>
-                <span className="text-xl font-bold font-mono text-[#D4A017]">€{animatedValue.toFixed(2)}</span>
+                <span className="text-xl font-bold font-mono text-[#D4A017]">€{totalValue.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -93,7 +64,7 @@ export default function DecksClient({ initialDecks, totalValue = 0, totalCards =
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`relative px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${activeTab === tab ? 'text-[#D4A017]' : 'text-gray-400 hover:text-gray-200'}`}
+              className={\`relative px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors \${activeTab === tab ? 'text-[#D4A017]' : 'text-gray-400 hover:text-gray-200'}\`}
             >
               {tab === 'Magic: The Gathering' ? 'Magic' : tab}
               {activeTab === tab && (
@@ -111,52 +82,40 @@ export default function DecksClient({ initialDecks, totalValue = 0, totalCards =
 
       {/* DECK GRID */}
       {filteredDecks.length === 0 ? (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="flex flex-col items-center justify-center text-center py-32 rounded-3xl"
-        >
-          {/* Vault SVG Icon Placeholder */}
-          <div className="mb-6 opacity-20 transform hover:scale-105 transition-transform duration-500">
-            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#D4A017" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              <circle cx="12" cy="16" r="1"></circle>
-            </svg>
-          </div>
-          <h2 className="text-3xl font-extrabold text-white mb-3">Your vault has no decks yet</h2>
-          <p className="text-gray-400 text-lg mb-8 max-w-md mx-auto">
+        <div className="text-center py-32 border border-dashed border-[#333] rounded-3xl bg-[#111]">
+          <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-500 text-2xl">?</div>
+          <h2 className="text-2xl font-bold text-white mb-2">No decks found</h2>
+          <p className="text-gray-500 mb-6 max-w-md mx-auto">
             {activeTab === 'All' 
-              ? "Build your first deck and start tracking its value"
-              : `You don't have any ${activeTab} decks yet.`}
+              ? "You haven't built any decks yet. Create your first deck to start adding cards and tracking value."
+              : \`You don't have any \${tab} decks yet.\`}
           </p>
           {activeTab === 'All' && (
             <button
               onClick={() => setIsModalOpen(true)}
-              className="bg-[#D4A017] text-black font-bold py-3 px-8 rounded-xl hover:bg-[#F2C84B] transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(212,160,23,0.3)]"
+              className="text-[#D4A017] border border-[#D4A017]/30 bg-[#D4A017]/10 px-6 py-3 rounded-xl hover:bg-[#D4A017]/20 transition font-medium"
             >
-              Create Your First Deck
+              Construct your first deck
             </button>
           )}
-        </motion.div>
+        </div>
       ) : (
         <motion.div
           layout
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center sm:justify-items-stretch"
         >
           <AnimatePresence mode="popLayout">
-            {filteredDecks.map((deck, i) => (
+            {filteredDecks.map((deck) => (
               <motion.div
                 layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3, delay: i * 0.1 }}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.2 }}
                 key={deck.id}
-                className="w-full flex justify-center md:block"
+                className="w-full flex justify-center md:block" // Center on mobile, standard grid on md+
               >
-                <Link href={`/decks/${deck.id}`} className="w-full max-w-[280px] md:max-w-none block">
+                <Link href={\`/decks/\${deck.id}\`} className="w-full max-w-[280px] md:max-w-none block">
                   <DeckCard deck={deck} />
                 </Link>
               </motion.div>
@@ -165,12 +124,16 @@ export default function DecksClient({ initialDecks, totalValue = 0, totalCards =
         </motion.div>
       )}
 
-      {/* MODAL IS INSIDE THE CLIENT BUT HANDLES ITS OWN PRESENCE internally by wrapping with AnimatePresence and conditional rendering */}
-      <CreateDeckModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={() => window.location.reload()}
-      />
+      {isModalOpen && (
+        <CreateDeckModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSuccess={() => window.location.reload()}
+        />
+      )}
     </div>
   );
 }
+`;
+
+fs.writeFileSync(deckPath, newDeckClient);

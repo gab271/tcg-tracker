@@ -1,4 +1,7 @@
-import { createClient } from '@/lib/supabase/server';
+const fs = require('fs');
+const pagePath = 'src/app/(protected)/decks/page.tsx';
+
+const newPage = `import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import DecksClient from '@/components/decks/DecksClient';
 
@@ -13,14 +16,14 @@ export default async function DecksPage() {
   // Fetch decks and count their cards
   const { data: decks, error } = await supabase
     .from('decks')
-    .select(`
+    .select(\`
       *,
       deck_cards (
         id,
         quantity,
         card_id
       )
-    `)
+    \`)
     .order('created_at', { ascending: false });
 
   let totalValue = 0;
@@ -51,3 +54,6 @@ export default async function DecksPage() {
 
   return <DecksClient initialDecks={formattedDecks} totalValue={totalValue} totalCards={totalCardsCount} />;
 }
+`;
+
+fs.writeFileSync(pagePath, newPage);

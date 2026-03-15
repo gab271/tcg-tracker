@@ -5,6 +5,15 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 
+const GAMES = [
+  { name: 'Pokémon', color: '#EF4444' },
+  { name: 'Magic: The Gathering', color: '#3B82F6' },
+  { name: 'One Piece', color: '#EAB308' },
+  { name: 'Yu-Gi-Oh!', color: '#8B5CF6' }
+];
+
+const FORMATS = ['Standard', 'Expanded', 'Unlimited'];
+
 export default function CreateDeckModal({
   isOpen,
   onClose,
@@ -15,7 +24,9 @@ export default function CreateDeckModal({
   onSuccess: () => void;
 }) {
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [game, setGame] = useState('Pokémon');
+  const [format, setFormat] = useState('Standard');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
@@ -32,73 +43,136 @@ export default function CreateDeckModal({
     }
 
     const { error } = await supabase.from('decks').insert([
-      { name, game, user_id: userData.user.id }
+      { name, description, game, format, user_id: userData.user.id }
     ]);
 
     setLoading(false);
     if (!error) {
       setName('');
+      setDescription('');
       setGame('Pokémon');
+      setFormat('Standard');
       onSuccess();
       onClose();
-      router.refresh();
+      router.refresh(); // optionally we handle refresh externally
+    } else {
+      console.error(error);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-[#121212] border border-[#222] p-6 rounded-xl w-full max-w-md shadow-2xl"
-        >
-          <h2 className="text-xl font-bold text-white mb-4">Create New Deck</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Deck Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-[#1e1e1e] border border-[#333] rounded px-3 py-2 text-white focus:outline-none focus:border-[#D4A017]"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Game</label>
-              <select
-                value={game}
-                onChange={(e) => setGame(e.target.value)}
-                className="w-full bg-[#1e1e1e] border border-[#333] rounded px-3 py-2 text-white focus:outline-none focus:border-[#D4A017]"
-              >
-                <option value="Pokémon">Pokémon</option>
-                <option value="Magic">Magic: The Gathering</option>
-                <option value="One Piece">One Piece</option>
-              </select>
-            </div>
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded text-gray-400 hover:text-white transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2 bg-[#D4A017] text-black font-semibold rounded hover:bg-[#b88c14] transition disabled:opacity-50"
-              >
-                {loading ? 'Creating...' : 'Create Deck'}
-              </button>
-            </div>
-          </form>
-        </motion.div>
-      </div>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="relative bg-[#121212] border border-gray-800 p-6 sm:p-8 rounded-2xl w-full max-w-lg shadow-[0_0_40px_rgba(0,0,0,0.5)] z-10 my-8 max-h-[90vh] overflow-y-auto scrollbar-hide"
+          >
+            <h2 className="text-2xl font-extrabold text-white mb-6">Create New Deck</h2>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Game Selector */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-3">Select Game</label>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  {GAMES.map((g) => {
+                    const isSelected = game === g.name;
+                    return (
+                      <motion.div
+                        key={g.name}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setGame(g.name)}
+                        className={`cursor-pointer relative p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all duration-200 ${isSelected ? 'bg-[#1a1a1a] shadow-[0_0_15px_rgba(212,160,23,0.15)]' : 'bg-[#0a0a0a] border-gray-800 hover:border-gray-600'}`}
+                        style={{ borderColor: isSelected ? '#D4A017' : undefined }}
+                      >
+                        <div 
+                          className="absolute inset-0 z-0 opacity-10 rounded-xl pointer-events-none" 
+                          style={{ background: `linear-gradient(to bottom right, ${g.color}, transparent)` }} 
+                        />
+                        <div 
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shadow-lg z-10"
+                          style={{ backgroundColor: g.color + '40', color: g.color, border: `1px solid ${g.color}60` }}
+                        >
+                          {g.name === 'Magic: The Gathering' ? 'MTG' : g.name.substring(0,3).toUpperCase()}
+                        </div>
+                        <span className={`text-sm font-medium z-10 text-center ${isSelected ? 'text-[#D4A017]' : 'text-gray-300'}`}>
+                          {g.name}
+                        </span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Name & Format */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">Deck Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Charizard ex"
+                    className="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] transition-all"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">Format</label>
+                  <select
+                    value={format}
+                    onChange={(e) => setFormat(e.target.value)}
+                    className="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] transition-all appearance-none"
+                  >
+                    {FORMATS.map(f => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Description <span className="text-gray-600 font-normal">(Optional)</span></label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Notes about strategy, missing cards, etc..."
+                  rows={3}
+                  className="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] transition-all resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end space-x-4 pt-4 border-t border-gray-800/50 mt-6">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-6 py-2.5 rounded-xl font-medium text-gray-400 hover:text-white hover:bg-white/5 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || !name.trim()}
+                  className="px-6 py-2.5 bg-[#D4A017] text-black font-bold rounded-xl hover:bg-[#F2C84B] hover:shadow-[0_0_20px_rgba(212,160,23,0.3)] transition-all disabled:opacity-50 disabled:hover:scale-100 active:scale-95"
+                >
+                  {loading ? 'Creating...' : 'Create Deck'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   );
 }

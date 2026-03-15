@@ -1,4 +1,8 @@
-import { motion } from 'framer-motion';
+const fs = require('fs');
+
+const deckPath = 'src/components/decks/DeckCard.tsx';
+
+const newDeckCard = `import { motion } from 'framer-motion';
 
 const GAME_COLORS: Record<string, string> = {
   'Pokémon': '#EF4444',
@@ -38,7 +42,7 @@ export function DeckCard({ deck }: { deck: any }) {
       {/* Background Gradient */}
       <div 
         className="absolute inset-0 z-0 opacity-10" 
-        style={{ background: `linear-gradient(to bottom right, ${accentColor}, transparent)` }} 
+        style={{ background: \`linear-gradient(to bottom right, \${accentColor}, transparent)\` }} 
       />
 
       {/* Top 55% - Cards */}
@@ -82,7 +86,7 @@ export function DeckCard({ deck }: { deck: any }) {
           <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
             <div 
               className="h-full bg-[#D4A017] rounded-full" 
-              style={{ width: `${progressPercent}%` }}
+              style={{ width: \`\${progressPercent}%\` }}
             />
           </div>
         </div>
@@ -101,3 +105,6 @@ export function DeckCard({ deck }: { deck: any }) {
     </motion.div>
   );
 }
+`;
+
+fs.writeFileSync(deckPath, newDeckCard);
