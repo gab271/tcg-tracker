@@ -34,7 +34,7 @@ export default function HeroSection() {
   return (
     <section
       ref={heroRef}
-      className="relative min-h-screen flex items-center justify-center pt-24 pb-12 overflow-hidden"
+      className="relative min-h-screen flex items-center justify-center py-24 overflow-hidden"
     >
       {/* Background elements */}
       <div className="absolute inset-0 z-0">
@@ -62,7 +62,7 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6 text-white"
+            className="text-3xl md:text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6 text-white"
           >
             Secure Your <br />
             <span className="text-gold-gradient">Rare TCG</span> Collection.
@@ -125,7 +125,7 @@ export default function HeroSection() {
         </div>
 
         {/* Right Column: Floating Cards Animation (GSAP Target) */}
-        <div className="hidden lg:block relative h-[600px] w-full" ref={cardsRef}>
+        <div className="hidden md:block relative h-[600px] w-full" ref={cardsRef}>
           {/* Card 1: Front/Main */}
           <motion.div
             initial={{ opacity: 0, y: 50, rotate: -5 }}
