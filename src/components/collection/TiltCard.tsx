@@ -14,9 +14,12 @@ interface TiltCardProps {
     game: string;
     rarity: string;
   };
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
-export default function TiltCard({ card }: TiltCardProps) {
+export default function TiltCard({ card, selectable, selected, onToggleSelect }: TiltCardProps) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -47,9 +50,15 @@ export default function TiltCard({ card }: TiltCardProps) {
     y.set(0);
   };
 
+  const CardWrapper = selectable ? "div" : Link;
+  const wrapperProps = selectable
+    ? { onClick: () => onToggleSelect?.(card.id), className: "cursor-pointer" }
+    : { href: `/collection/${card.id}` };
+
   return (
     <div className="flex flex-col gap-3 group" style={{ perspective: "1000px" }}>
-      <Link href={`/collection/${card.id}`}>
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <CardWrapper {...(wrapperProps as any)}>
         <motion.div
           onMouseMove={handleMouseMove}
           onMouseEnter={() => setIsHovered(true)}
@@ -59,7 +68,9 @@ export default function TiltCard({ card }: TiltCardProps) {
             rotateY,
             transformStyle: "preserve-3d",
           }}
-          className="relative w-full aspect-[63/88] rounded-xl cursor-pointer"
+          className={`relative w-full aspect-[63/88] rounded-xl cursor-pointer transition-opacity ${
+            selectable && !selected ? "opacity-60" : "opacity-100"
+          }`}
         >
           <div
             className="absolute inset-0 rounded-xl overflow-hidden bg-vault-800 vault-border"
@@ -112,12 +123,34 @@ export default function TiltCard({ card }: TiltCardProps) {
                 }}
               />
             )}
+
+            {/* Selection checkbox overlay */}
+            {selectable && (
+              <div className="absolute top-2 left-2 z-30 pointer-events-none">
+                <div
+                  className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                    selected
+                      ? "bg-gold-500 border-gold-400"
+                      : "bg-black/50 border-gray-500"
+                  }`}
+                >
+                  {selected && (
+                    <svg className="w-3 h-3 text-vault-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
-      </Link>
+      </CardWrapper>
 
       {/* Card Metadata */}
-      <Link href={`/collection/${card.id}`} className="flex justify-between items-start hover:opacity-80 transition-opacity">
+      <CardWrapper {...(selectable
+        ? { onClick: () => onToggleSelect?.(card.id), className: "flex justify-between items-start cursor-pointer hover:opacity-80 transition-opacity" }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        : { href: `/collection/${card.id}`, className: "flex justify-between items-start hover:opacity-80 transition-opacity" } as any)}>
         <div className="flex flex-col min-w-0">
           <h4 className="text-sm font-bold text-white mb-0.5 truncate">{card.name}</h4>
           <span className="text-[10px] text-gray-500 uppercase tracking-wider truncate">{card.game} • {card.rarity}</span>
@@ -130,7 +163,7 @@ export default function TiltCard({ card }: TiltCardProps) {
             x{card.quantity}
           </span>
         </div>
-      </Link>
+      </CardWrapper>
     </div>
   );
 }

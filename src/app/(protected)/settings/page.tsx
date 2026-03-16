@@ -23,11 +23,20 @@ import {
   Mail,
   Globe,
   DollarSign,
+  Upload,
+  ExternalLink,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
+import { useImportCollection } from "@/hooks/use-collection";
+import {
+  upsertUserProfile,
+  fetchOwnProfile,
+} from "@/lib/supabase/queries/public-profile";
+import type { AddCardInput } from "@/lib/validations/collection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -209,9 +218,22 @@ export default function SettingsPage() {
 
   // ── Danger zone
   const [exporting,       setExporting]       = useState(false);
+  const [exportingJson,   setExportingJson]   = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteConfirm,   setDeleteConfirm]   = useState("");
   const [deleting,        setDeleting]        = useState(false);
+
+  // ── Public profile
+  const [pubUsername,          setPubUsername]          = useState("");
+  const [pubCollection,        setPubCollection]        = useState(false);
+  const [pubDecks,             setPubDecks]             = useState(false);
+  const [pubProfileSaving,     setPubProfileSaving]     = useState(false);
+  const [pubProfileLoaded,     setPubProfileLoaded]     = useState(false);
+
+  // ── Import
+  const [importedCards, setImportedCards]     = useState<AddCardInput[] | null>(null);
+  const [importError,   setImportError]       = useState<string | null>(null);
+  const importCollection = useImportCollection();
 
   // ── Load user metadata into state
   useEffect(() => {
@@ -223,6 +245,19 @@ export default function SettingsPage() {
       setNotifs((n) => ({ ...n, ...(meta.notifications as Partial<NotifPrefs>) }));
     }
   }, [user]);
+
+  // ── Load public profile
+  useEffect(() => {
+    if (!user || pubProfileLoaded) return;
+    fetchOwnProfile(supabase, user.id).then((p) => {
+      if (p) {
+        setPubUsername(p.username ?? "");
+        setPubCollection(p.isPublicCollection);
+        setPubDecks(p.isPublicDecks);
+      }
+      setPubProfileLoaded(true);
+    });
+  }, [user, supabase, pubProfileLoaded]);
 
   // ─── Handlers ────────────────────────────────────────────────────────────
 
@@ -303,6 +338,29 @@ export default function SettingsPage() {
     [notifs, supabase.auth]
   );
 
+  const handlePublicProfileSave = async () => {
+    if (!user) return;
+    if (pubUsername && !/^[a-z0-9_]{3,30}$/.test(pubUsername)) {
+      toast.error("Username must be 3–30 chars: lowercase letters, numbers, underscores.");
+      return;
+    }
+    setPubProfileSaving(true);
+    try {
+      await upsertUserProfile(supabase, user.id, {
+        username: pubUsername || undefined,
+        displayName: profile?.displayName,
+        avatarUrl: profile?.avatarUrl ?? undefined,
+        isPublicCollection: pubCollection,
+        isPublicDecks: pubDecks,
+      });
+      toast.success("Public profile updated.");
+    } catch {
+      toast.error("Failed to save public profile.");
+    } finally {
+      setPubProfileSaving(false);
+    }
+  };
+
   const handleExportData = async () => {
     if (!user) return;
     setExporting(true);
@@ -313,8 +371,9 @@ export default function SettingsPage() {
       ]);
 
       const collectionCsv = [
-        ["Card Name", "Game", "Rarity", "Price (€)", "Quantity", "Date Added"],
+        ["Card ID", "Card Name", "Game", "Rarity", "Price (€)", "Quantity", "Date Added"],
         ...(collection ?? []).map((c: Record<string, unknown>) => [
+          c.card_id,
           `"${c.card_name}"`,
           c.game,
           (c.rarity as string) ?? "",
@@ -346,11 +405,120 @@ export default function SettingsPage() {
       a.download = `vault-export-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Data exported successfully.");
+      toast.success("CSV exported successfully.");
     } catch {
       toast.error("Failed to export data.");
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleExportJson = async () => {
+    if (!user) return;
+    setExportingJson(true);
+    try {
+      const [{ data: collection }, { data: decks }] = await Promise.all([
+        supabase.from("collections").select("*").eq("user_id", user.id),
+        supabase.from("decks").select("*, deck_cards(*)").eq("user_id", user.id),
+      ]);
+
+      const payload = {
+        exported_at: new Date().toISOString(),
+        collection: (collection ?? []).map((c: Record<string, unknown>) => ({
+          card_id: c.card_id,
+          card_name: c.card_name,
+          game: c.game,
+          rarity: c.rarity,
+          price: c.price,
+          quantity: c.quantity,
+          card_image: c.card_image,
+        })),
+        decks: (decks ?? []).map((d: Record<string, unknown>) => ({
+          name: d.name,
+          game: d.game,
+          cards: d.deck_cards,
+        })),
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `vault-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("JSON exported successfully.");
+    } catch {
+      toast.error("Failed to export JSON.");
+    } finally {
+      setExportingJson(false);
+    }
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportError(null);
+    setImportedCards(null);
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      try {
+        if (file.name.endsWith(".json")) {
+          const json = JSON.parse(text);
+          const cards: AddCardInput[] = (json.collection ?? []).map((c: Record<string, unknown>) => ({
+            cardId: String(c.card_id ?? ""),
+            name: String(c.card_name ?? ""),
+            image: (c.card_image as string | undefined) ?? undefined,
+            game: String(c.game ?? ""),
+            rarity: String(c.rarity ?? "Common"),
+            price: Number(c.price ?? 0),
+            quantity: Number(c.quantity ?? 1),
+          })).filter((c: AddCardInput) => c.cardId && c.name);
+          setImportedCards(cards);
+        } else {
+          // CSV: skip non-data lines, find the COLLECTION section
+          const lines = text.split("\n");
+          const start = lines.findIndex((l) => l.trim().startsWith("Card ID,"));
+          if (start === -1) { setImportError("Invalid CSV format. Export a file first to see the expected format."); return; }
+          const cards: AddCardInput[] = [];
+          for (let i = start + 1; i < lines.length; i++) {
+            const row = lines[i].trim();
+            if (!row || row.startsWith("DECKS")) break;
+            const cols = row.split(",");
+            if (cols.length < 5) continue;
+            const cardId = cols[0]?.trim();
+            const name = cols[1]?.replace(/^"|"$/g, "").trim();
+            if (!cardId || !name) continue;
+            cards.push({
+              cardId,
+              name,
+              game: cols[2]?.trim() ?? "",
+              rarity: cols[3]?.trim() ?? "Common",
+              price: parseFloat(cols[4] ?? "0") || 0,
+              quantity: parseInt(cols[5] ?? "1", 10) || 1,
+            });
+          }
+          setImportedCards(cards);
+        }
+      } catch {
+        setImportError("Failed to parse file. Make sure it's a valid TCG Vault export.");
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  };
+
+  const handleImportSubmit = async () => {
+    if (!importedCards || importedCards.length === 0) return;
+    try {
+      const result = await importCollection.mutateAsync(importedCards);
+      toast.success(`Imported ${result.imported} cards to your vault.`);
+      setImportedCards(null);
+    } catch {
+      toast.error("Import failed. Please try again.");
     }
   };
 
@@ -638,6 +806,96 @@ export default function SettingsPage() {
                     </div>
                   </form>
                 </SectionCard>
+
+                {/* Public Profile */}
+                <SectionCard>
+                  <SectionHeader
+                    title="Public Profile"
+                    description="Share your collection and decks with a public link."
+                  />
+                  <div className="p-6 space-y-5">
+                    {/* Username */}
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2.5">
+                        <Link2 className="w-3 h-3" />
+                        Public username
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600 font-mono shrink-0">tcgvault.app/u/</span>
+                        <input
+                          value={pubUsername}
+                          onChange={(e) => setPubUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                          placeholder="your_username"
+                          maxLength={30}
+                          className="flex-1 bg-vault-800 border border-gray-700 focus:border-gold-500/50 rounded-lg h-10 px-3 text-sm text-white placeholder:text-gray-600 outline-none transition-colors font-mono"
+                        />
+                      </div>
+                      {pubUsername.length > 0 && pubUsername.length < 3 && (
+                        <p className="text-[10px] text-red-400 mt-1">Minimum 3 characters</p>
+                      )}
+                    </div>
+
+                    {/* Toggles */}
+                    {[
+                      { label: "Make collection public", desc: "Anyone can view your full card vault.", value: pubCollection, onChange: setPubCollection },
+                      { label: "Make decks public", desc: "Anyone can view your deck lists.", value: pubDecks, onChange: setPubDecks },
+                    ].map(({ label, desc, value, onChange }) => (
+                      <div key={label} className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-semibold text-white">{label}</p>
+                          <p className="text-xs text-gray-600 mt-0.5">{desc}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onChange(!value)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 transition-colors duration-200 ${
+                            value ? "bg-gold-500 border-gold-400" : "bg-gray-700 border-gray-600"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 mt-0.5 ${
+                              value ? "translate-x-5" : "translate-x-0.5"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Share link preview */}
+                    {pubUsername.length >= 3 && (
+                      <div className="flex items-center gap-2 p-3 bg-vault-900 rounded-lg border border-gray-800">
+                        <ExternalLink className="w-3.5 h-3.5 text-gold-400/60 shrink-0" />
+                        <span className="text-xs font-mono text-gray-500 truncate">
+                          tcgvault.app/u/{pubUsername}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/u/${pubUsername}`);
+                            toast.success("Link copied!");
+                          }}
+                          className="ml-auto text-[10px] text-gold-400/70 hover:text-gold-400 transition-colors uppercase tracking-wider shrink-0"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end pt-1">
+                      <motion.button
+                        type="button"
+                        onClick={handlePublicProfileSave}
+                        disabled={pubProfileSaving || (pubUsername.length > 0 && pubUsername.length < 3)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        className="flex items-center gap-2 px-5 py-2 bg-gold-500 hover:bg-gold-400 text-vault-900 font-bold text-sm rounded-xl transition-colors shadow-[0_0_16px_rgba(212,175,55,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {pubProfileSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                        {pubProfileSaving ? "Saving…" : "Save profile"}
+                      </motion.button>
+                    </div>
+                  </div>
+                </SectionCard>
               </div>
             )}
 
@@ -859,25 +1117,95 @@ export default function SettingsPage() {
                 <SectionCard>
                   <SectionHeader
                     title="Export Your Data"
-                    description="Download a CSV file containing your full collection and decks."
+                    description="Download your full collection and decks as CSV or JSON."
                   />
-                  <div className="p-6 flex items-start justify-between gap-4 flex-wrap">
-                    <div className="text-xs text-gray-600 max-w-sm leading-relaxed">
-                      Your export will include all collection cards (name, game, rarity, price, quantity)
-                      and your decks. The file will be downloaded immediately.
+                  <div className="p-6 space-y-4">
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      CSV format is compatible with spreadsheet apps. JSON format preserves all data
+                      and can be re-imported into TCG Vault. Both include card IDs for round-trip import.
+                    </p>
+                    <div className="flex gap-3 flex-wrap">
+                      <motion.button
+                        whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                        onClick={handleExportData}
+                        disabled={exporting}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-white/10 bg-white/4 hover:bg-white/8 text-gray-300 hover:text-white transition-all disabled:opacity-50"
+                      >
+                        {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                        {exporting ? "Exporting…" : "Export CSV"}
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                        onClick={handleExportJson}
+                        disabled={exportingJson}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-white/10 bg-white/4 hover:bg-white/8 text-gray-300 hover:text-white transition-all disabled:opacity-50"
+                      >
+                        {exportingJson ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                        {exportingJson ? "Exporting…" : "Export JSON"}
+                      </motion.button>
                     </div>
-                    <motion.button
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={handleExportData}
-                      disabled={exporting}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-white/10 bg-white/4 hover:bg-white/8 text-gray-300 hover:text-white transition-all disabled:opacity-50"
-                    >
-                      {exporting
-                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        : <Download className="w-3.5 h-3.5" />}
-                      {exporting ? "Exporting…" : "Export CSV"}
-                    </motion.button>
+                  </div>
+                </SectionCard>
+
+                {/* Import data */}
+                <SectionCard>
+                  <SectionHeader
+                    title="Import Collection"
+                    description="Import cards from a TCG Vault export file (CSV or JSON)."
+                  />
+                  <div className="p-6 space-y-4">
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Upload a CSV or JSON file exported from TCG Vault. Existing cards will be updated;
+                      new cards will be added. Images are not imported but will load automatically.
+                    </p>
+
+                    <label className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-gray-700 hover:border-gold-500/40 cursor-pointer transition-colors group">
+                      <Upload className="w-4 h-4 text-gray-600 group-hover:text-gold-400 transition-colors shrink-0" />
+                      <span className="text-sm text-gray-500 group-hover:text-gray-300 transition-colors">
+                        {importedCards
+                          ? `${importedCards.length} card${importedCards.length !== 1 ? "s" : ""} ready to import`
+                          : "Choose a .csv or .json file"}
+                      </span>
+                      <input
+                        type="file"
+                        accept=".csv,.json"
+                        className="hidden"
+                        onChange={handleImportFile}
+                      />
+                    </label>
+
+                    {importError && (
+                      <p className="text-xs text-red-400">{importError}</p>
+                    )}
+
+                    {importedCards && importedCards.length > 0 && (
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-green-400">
+                          {importedCards.length} cards parsed successfully.
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setImportedCards(null)}
+                            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <motion.button
+                            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                            type="button"
+                            onClick={handleImportSubmit}
+                            disabled={importCollection.isPending}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-gold-500 hover:bg-gold-400 text-vault-900 transition-all disabled:opacity-50"
+                          >
+                            {importCollection.isPending
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <Upload className="w-3.5 h-3.5" />}
+                            {importCollection.isPending ? "Importing…" : `Import ${importedCards.length} cards`}
+                          </motion.button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </SectionCard>
 

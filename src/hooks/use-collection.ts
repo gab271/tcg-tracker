@@ -7,6 +7,9 @@ import {
   addCardToCollection,
   removeCardFromCollection,
   updateCardQuantity,
+  deleteCardsBatch,
+  addCollectionCardsToDeck,
+  importCollectionBatch,
 } from "@/lib/supabase/queries/collection";
 import type { AddCardInput } from "@/lib/validations/collection";
 import { useAuth } from "./use-auth";
@@ -62,6 +65,55 @@ export function useUpdateCardQuantity() {
       updateCardQuantity(supabase, cardId, quantity),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["collection"] });
+    },
+  });
+}
+
+export function useDeleteCardsBatch() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (ids: string[]) => deleteCardsBatch(supabase, ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["collection"] });
+      queryClient.invalidateQueries({ queryKey: ["user-stats"] });
+    },
+  });
+}
+
+export function useMoveToDeck() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      deckId,
+      cards,
+    }: {
+      deckId: string;
+      cards: { cardId: string; name: string; image: string | null; price: number }[];
+    }) => addCollectionCardsToDeck(supabase, deckId, cards),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deck-cards"] });
+      queryClient.invalidateQueries({ queryKey: ["decks"] });
+    },
+  });
+}
+
+export function useImportCollection() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: (cards: AddCardInput[]) => {
+      if (!user) throw new Error("Not authenticated");
+      return importCollectionBatch(supabase, user.id, cards);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["collection"] });
+      queryClient.invalidateQueries({ queryKey: ["user-stats"] });
     },
   });
 }
