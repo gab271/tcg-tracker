@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import TiltCard from "@/components/collection/TiltCard";
 import AddCardModal from "@/components/collection/AddCardModal";
 import { useCollection, useAddCard } from "@/hooks/use-collection";
+import { usePlanLimits } from "@/hooks/use-profile";
 import type { CardSearchResult } from "@/types/domain";
 import { toast } from "sonner";
 import { mapSupabaseError } from "@/lib/errors";
@@ -21,12 +22,17 @@ export default function CollectionPage() {
     activeGame === "All" ? undefined : activeGame
   );
   const addCard = useAddCard();
+  const { canAddCard, isAtCardLimit, limits, usage } = usePlanLimits();
 
   const filteredCollection = collection.filter((card) =>
     card.card_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleAddCard = async (card: CardSearchResult) => {
+    if (!canAddCard) {
+      toast.error(`Free plan limit: ${limits.maxCards} cards. Upgrade to Pro for unlimited.`);
+      return;
+    }
     try {
       await addCard.mutateAsync({
         cardId: card.id,
@@ -55,14 +61,27 @@ export default function CollectionPage() {
             Manage, filter, and view your tracked cards in glorious 3D.
           </p>
         </div>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="px-5 py-2.5 rounded-sm vault-border bg-vault-800 hover:bg-vault-700 text-gold-400 text-sm font-bold tracking-wider uppercase transition-all vault-glow flex items-center gap-2 group relative overflow-hidden self-start md:self-auto"
-        >
-          <div className="absolute inset-0 bg-gold-gradient opacity-0 group-hover:opacity-10 transition-opacity" />
-          <Plus className="w-4 h-4 relative z-10" />
-          <span className="relative z-10">Add Card</span>
-        </button>
+        <div className="flex flex-col items-end gap-1 self-start md:self-auto">
+          <button
+            onClick={() => {
+              if (isAtCardLimit) {
+                toast.error(`Free plan limit: ${limits.maxCards} cards. Upgrade to Pro for unlimited.`);
+              } else {
+                setIsAddModalOpen(true);
+              }
+            }}
+            className="px-5 py-2.5 rounded-sm vault-border bg-vault-800 hover:bg-vault-700 text-gold-400 text-sm font-bold tracking-wider uppercase transition-all vault-glow flex items-center gap-2 group relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gold-gradient opacity-0 group-hover:opacity-10 transition-opacity" />
+            <Plus className="w-4 h-4 relative z-10" />
+            <span className="relative z-10">Add Card</span>
+          </button>
+          {isAtCardLimit && (
+            <p className="text-[10px] text-amber-400/70">
+              {usage.cards}/{limits.maxCards} cards · <span className="underline cursor-pointer hover:text-amber-400">Upgrade to Pro</span>
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Filters Bar */}

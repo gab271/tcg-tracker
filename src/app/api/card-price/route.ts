@@ -149,6 +149,81 @@ async function fetchMagicPrice(cardId: string): Promise<PriceResult | null> {
   };
 }
 
+// --- Helper: fetch Yu-Gi-Oh price from YGOPRODeck ---
+interface YgoCard {
+  name?: string;
+  card_images?: Array<{ image_url?: string }>;
+  card_prices?: Array<Record<string, string>>;
+}
+
+async function fetchYugiohPrice(cardId: string): Promise<PriceResult | null> {
+  const extractCard = (card: YgoCard): PriceResult => {
+    const prices = card.card_prices?.[0];
+    const rawPrice = prices?.cardmarket_price ?? prices?.tcgplayer_price ?? prices?.ebay_price ?? null;
+    const price = rawPrice && parseFloat(rawPrice) > 0 ? parseFloat(rawPrice) : null;
+    return {
+      currentPrice: price,
+      currency: prices?.cardmarket_price ? "EUR" : "USD",
+      source: "ygoprodeck",
+      name: card.name ?? cardId,
+      image: card.card_images?.[0]?.image_url ?? null,
+    };
+  };
+
+  // Try by passcode / numeric id
+  if (/^\d+$/.test(cardId)) {
+    try {
+      const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${cardId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data?.[0]) return extractCard(data.data[0]);
+      }
+    } catch {
+      // fall through to name search
+    }
+  }
+
+  // Try by exact name
+  try {
+    const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(cardId)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.data?.[0]) return extractCard(data.data[0]);
+    }
+  } catch {
+    // fall through to fuzzy search
+  }
+
+  // Fuzzy name search
+  try {
+    const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(cardId)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.data?.[0]) return null;
+    return extractCard(data.data[0]);
+  } catch {
+    return null;
+  }
+}
+
+// --- Helper: fetch One Piece card data from TCGdex (no market prices available) ---
+async function fetchOnePiecePrice(cardId: string): Promise<PriceResult | null> {
+  try {
+    const res = await fetch(`https://api.tcgdex.net/v2/en/cards/${encodeURIComponent(cardId)}`);
+    if (!res.ok) return null;
+    const card = await res.json();
+    return {
+      currentPrice: null,
+      currency: "EUR",
+      source: "tcgdex",
+      name: (card?.name as string) ?? cardId,
+      image: card?.image ? `${card.image}/high.webp` : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // --- Helper: generate synthetic 7-day price history ---
 function generatePriceHistory(currentPrice: number | null): PriceHistoryEntry[] {
   if (!currentPrice) return [];
@@ -169,24 +244,36 @@ function generatePriceHistory(currentPrice: number | null): PriceHistoryEntry[] 
   return history;
 }
 
-// --- GET /api/card-price?cardId=xxx&game=pokemon|magic ---
-const VALID_GAMES = ["pokemon", "magic"] as const;
+// --- Normalize game parameter to canonical keys ---
+function normalizeGame(raw: string): string {
+  const s = raw.toLowerCase().trim();
+  if (s === "pokemon" || s === "pokémon" || s === "pkm") return "pokemon";
+  if (s === "magic" || s === "magic: the gathering" || s === "mtg") return "magic";
+  if (s === "yugioh" || s === "yu-gi-oh!" || s === "yu-gi-oh" || s === "ygo") return "yugioh";
+  if (s === "onepiece" || s === "one piece" || s === "op" || s === "one piece tcg") return "onepiece";
+  return s;
+}
+
+// --- GET /api/card-price?cardId=xxx&game=pokemon|magic|yugioh|onepiece ---
+const VALID_GAMES = ["pokemon", "magic", "yugioh", "onepiece"] as const;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const cardId = searchParams.get("cardId");
-  const game = searchParams.get("game")?.toLowerCase();
+  const rawGame = searchParams.get("game");
 
-  if (!cardId || !game) {
+  if (!cardId || !rawGame) {
     return NextResponse.json(
       { error: "Missing required query params: cardId, game" },
       { status: 400 }
     );
   }
 
+  const game = normalizeGame(rawGame);
+
   if (!VALID_GAMES.includes(game as typeof VALID_GAMES[number])) {
     return NextResponse.json(
-      { error: 'Unsupported game. Use "pokemon" or "magic".' },
+      { error: 'Unsupported game. Use "pokemon", "magic", "yugioh", or "onepiece".' },
       { status: 400 }
     );
   }
@@ -225,8 +312,12 @@ export async function GET(request: NextRequest) {
   let result: PriceResult | null;
   if (game === "pokemon") {
     result = await fetchPokemonPrice(cardId);
-  } else {
+  } else if (game === "magic") {
     result = await fetchMagicPrice(cardId);
+  } else if (game === "yugioh") {
+    result = await fetchYugiohPrice(cardId);
+  } else {
+    result = await fetchOnePiecePrice(cardId);
   }
 
   if (!result) {

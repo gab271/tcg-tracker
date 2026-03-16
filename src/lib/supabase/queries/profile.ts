@@ -27,19 +27,54 @@ export async function fetchUserProfile(supabase: SupabaseClient): Promise<Profil
   };
 }
 
+export interface GameDistributionEntry {
+  game: string;
+  count: number;
+  value: number;
+}
+
+export interface RecentActivityEntry {
+  id: string;
+  name: string;
+  game: string;
+  price: number;
+  createdAt: string;
+}
+
+export interface TopCard {
+  name: string;
+  game: string;
+  price: number;
+  image: string | null;
+}
+
 export interface UserStatsData {
   totalCards: number;
   totalValue: number;
   deckCount: number;
+  listingCount: number;
+  gameDistribution: GameDistributionEntry[];
+  topCard: TopCard | null;
+  recentActivity: RecentActivityEntry[];
 }
 
 export async function fetchUserStats(supabase: SupabaseClient, userId: string): Promise<UserStatsData> {
-  const [collectionResult, decksResult] = await Promise.all([
-    supabase.from("collections").select("quantity, price").eq("user_id", userId),
+  const [collectionResult, decksResult, listingsResult] = await Promise.all([
+    supabase
+      .from("collections")
+      .select("card_name, game, price, quantity, card_image, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }),
     supabase.from("decks").select("id").eq("user_id", userId),
+    supabase
+      .from("market_listings")
+      .select("id", { count: "exact", head: true })
+      .eq("seller_id", userId)
+      .eq("status", "active"),
   ]);
 
   const collection = collectionResult.data ?? [];
+
   const totalCards = collection.reduce(
     (acc: number, item: { quantity?: number }) => acc + (item.quantity ?? 1),
     0
@@ -50,10 +85,50 @@ export async function fetchUserStats(supabase: SupabaseClient, userId: string): 
     0
   );
 
+  // Game distribution grouped by game name
+  const gameMap = new Map<string, { count: number; value: number }>();
+  for (const item of collection) {
+    const game = (item.game as string) ?? "Unknown";
+    const existing = gameMap.get(game) ?? { count: 0, value: 0 };
+    gameMap.set(game, {
+      count: existing.count + (item.quantity ?? 1),
+      value: existing.value + (item.price ?? 0) * (item.quantity ?? 1),
+    });
+  }
+  const gameDistribution: GameDistributionEntry[] = Array.from(gameMap.entries())
+    .map(([game, stats]) => ({ game, count: stats.count, value: stats.value }))
+    .sort((a, b) => b.count - a.count);
+
+  // Crown jewel: highest unit-price card
+  type CollectionItem = { card_name: string; game: string; price: number; quantity: number; card_image: string | null; created_at: string };
+  const topCardRow = (collection as CollectionItem[]).reduce(
+    (best: CollectionItem | null, item) =>
+      !best || (item.price ?? 0) > (best.price ?? 0) ? item : best,
+    null
+  );
+  const topCard: TopCard | null = topCardRow
+    ? { name: topCardRow.card_name, game: topCardRow.game, price: topCardRow.price ?? 0, image: topCardRow.card_image ?? null }
+    : null;
+
+  // Recent activity: last 4 items added
+  const recentActivity: RecentActivityEntry[] = (collection as CollectionItem[])
+    .slice(0, 4)
+    .map((item) => ({
+      id: `${item.card_name}-${item.created_at}`,
+      name: item.card_name,
+      game: item.game,
+      price: item.price ?? 0,
+      createdAt: item.created_at,
+    }));
+
   return {
     totalCards,
     totalValue,
     deckCount: decksResult.data?.length ?? 0,
+    listingCount: listingsResult.count ?? 0,
+    gameDistribution,
+    topCard,
+    recentActivity,
   };
 }
 

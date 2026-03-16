@@ -8,6 +8,7 @@ import {
   updateDisplayName,
   uploadAvatar,
 } from "@/lib/supabase/queries/profile";
+import { PLAN_LIMITS } from "@/lib/plan-limits";
 import { useAuth } from "./use-auth";
 
 export function useProfile() {
@@ -30,6 +31,32 @@ export function useUserStats() {
     enabled: !!user,
     staleTime: 1000 * 60 * 2,
   });
+}
+
+export function usePlanLimits() {
+  const { data: profile } = useProfile();
+  const { data: stats } = useUserStats();
+
+  const plan = (profile?.plan ?? "FREE") as "FREE" | "PRO";
+  const limits = PLAN_LIMITS[plan];
+
+  const usage = {
+    cards: stats?.totalCards ?? 0,
+    decks: stats?.deckCount ?? 0,
+    listings: stats?.listingCount ?? 0,
+  };
+
+  return {
+    plan,
+    limits,
+    usage,
+    canAddCard: plan === "PRO" || usage.cards < limits.maxCards,
+    canAddDeck: plan === "PRO" || usage.decks < limits.maxDecks,
+    canAddListing: plan === "PRO" || usage.listings < limits.maxListings,
+    isAtCardLimit: plan === "FREE" && usage.cards >= limits.maxCards,
+    isAtDeckLimit: plan === "FREE" && usage.decks >= limits.maxDecks,
+    isAtListingLimit: plan === "FREE" && usage.listings >= limits.maxListings,
+  };
 }
 
 export function useUpdateDisplayName() {
