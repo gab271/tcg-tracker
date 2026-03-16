@@ -1,21 +1,24 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   Camera,
   Loader2,
   Star,
-  TrendingUp,
-  Layers,
-  Award,
   Check,
   Lock,
-  History,
+  Pencil,
+  Layers,
+  TrendingUp,
+  LayoutGrid,
   Trophy,
-  Gamepad,
+  History,
+  Settings,
+  ExternalLink,
 } from "lucide-react";
 import {
   useProfile,
@@ -23,37 +26,86 @@ import {
   useUpdateDisplayName,
   useUploadAvatar,
 } from "@/hooks/use-profile";
-import { mapSupabaseError } from "@/lib/errors";
 import { useCollection } from "@/hooks/use-collection";
+import { useCountUp } from "@/hooks/use-count-up";
+import { mapSupabaseError } from "@/lib/errors";
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
+// ── Config ────────────────────────────────────────────────────────────────────
+
+const GAME_CONFIG: Record<string, { color: string; symbol: string; accent: string }> = {
+  "Pokémon":              { color: "#ef4444", symbol: "⚡", accent: "#ef444430" },
+  "Magic: The Gathering": { color: "#3b82f6", symbol: "✦", accent: "#3b82f630" },
+  "One Piece":            { color: "#eab308", symbol: "☠", accent: "#eab30830" },
+  "Yu-Gi-Oh!":            { color: "#a855f7", symbol: "★", accent: "#a855f730" },
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } },
-};
+const BADGE_DATA = [
+  {
+    id: "first_card",
+    name: "First Relic",
+    desc: "Added your first card to the vault",
+    symbol: "◈",
+    color: "#d4af37",
+    check: (cards: number) => cards > 0,
+  },
+  {
+    id: "vault_starter",
+    name: "Vault Keeper",
+    desc: "Secured 10 or more cards",
+    symbol: "◆",
+    color: "#60a5fa",
+    check: (cards: number) => cards >= 10,
+  },
+  {
+    id: "deck_builder",
+    name: "Architect",
+    desc: "Assembled your first deck",
+    symbol: "⊞",
+    color: "#4ade80",
+    check: (_: number, decks: number) => decks > 0,
+  },
+  {
+    id: "market_explorer",
+    name: "The Broker",
+    desc: "Explored the card market",
+    symbol: "◎",
+    color: "#f59e0b",
+    check: () => true,
+  },
+];
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
   const [isEditingName, setIsEditingName] = useState(false);
-  const [draftName, setDraftName] = useState("");
+  const [draftName, setDraftName]         = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: profile, isLoading: profileLoading } = useProfile();
-  const { data: stats } = useUserStats();
-  const { data: collection = [] } = useCollection();
-  const updateDisplayName = useUpdateDisplayName();
-  const uploadAvatar = useUploadAvatar();
+  const { data: profile, isLoading } = useProfile();
+  const { data: stats }              = useUserStats();
+  const { data: collection = [] }    = useCollection();
+  const updateDisplayName            = useUpdateDisplayName();
+  const uploadAvatar                 = useUploadAvatar();
 
-  const recentActivity = collection.slice(0, 5);
-  const games = [...new Set(collection.map((item) => item.game))];
+  const recentActivity = collection.slice(0, 6);
+  const games          = [...new Set(collection.map((item) => item.game))];
 
-  const handleEditName = () => {
-    setDraftName(profile?.displayName ?? "");
-    setIsEditingName(true);
-  };
+  // Dominant game drives ambient color palette
+  const primaryGame  = games[0];
+  const gameCfg      = GAME_CONFIG[primaryGame] ?? { color: "#d4af37", symbol: "◈", accent: "#d4af3730" };
+
+  // Animated stat counters
+  const animCards = useCountUp(stats?.totalCards ?? 0);
+  const animValue = useCountUp(stats?.totalValue  ?? 0);
+  const animDecks = useCountUp(stats?.deckCount   ?? 0);
+
+  const badges = BADGE_DATA.map((b) => ({
+    ...b,
+    unlocked: b.check(stats?.totalCards ?? 0, stats?.deckCount ?? 0),
+  }));
+  const unlockedCount = badges.filter((b) => b.unlocked).length;
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
 
   const handleSaveName = async () => {
     if (!draftName.trim()) return;
@@ -61,8 +113,8 @@ export default function ProfilePage() {
       await updateDisplayName.mutateAsync(draftName.trim());
       toast.success("Name updated!");
       setIsEditingName(false);
-    } catch (error) {
-      toast.error(mapSupabaseError(error));
+    } catch (err) {
+      toast.error(mapSupabaseError(err));
     }
   };
 
@@ -71,348 +123,506 @@ export default function ProfilePage() {
     if (!file) return;
     try {
       await uploadAvatar.mutateAsync(file);
-      toast.success("Photo updated successfully!");
-    } catch (error) {
-      toast.error(mapSupabaseError(error));
+      toast.success("Photo updated!");
+    } catch (err) {
+      toast.error(mapSupabaseError(err));
     }
   };
 
-  const collectorBadges = [
-    {
-      id: "first_card",
-      name: "First Card",
-      description: "Add a card to your collection",
-      unlocked: (stats?.totalCards ?? 0) > 0,
-    },
-    {
-      id: "vault_starter",
-      name: "Vault Starter",
-      description: "Secure 10+ cards in your vault",
-      unlocked: (stats?.totalCards ?? 0) >= 10,
-    },
-    {
-      id: "deck_builder",
-      name: "Deck Builder",
-      description: "Create your first deck",
-      unlocked: (stats?.deckCount ?? 0) > 0,
-    },
-    {
-      id: "market_explorer",
-      name: "Market Explorer",
-      description: "Visit the market to check prices",
-      unlocked: true,
-    },
-  ];
+  // ── Loading ───────────────────────────────────────────────────────────────
 
-  if (profileLoading) {
+  if (isLoading) {
     return (
-      <div className="flex h-[calc(100vh-80px)] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gold-500" />
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-gold-500" />
       </div>
     );
   }
 
   const displayName = profile?.displayName ?? "Anonymous Collector";
-  const email = profile?.email ?? "";
-  const avatarUrl = profile?.avatarUrl ?? null;
-  const plan = profile?.plan ?? "FREE";
+  const email       = profile?.email       ?? "";
+  const avatarUrl   = profile?.avatarUrl   ?? null;
+  const plan        = profile?.plan        ?? "FREE";
   const memberSince = profile?.memberSince ?? "";
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="show"
-      className="container mx-auto px-4 py-8 max-w-6xl"
-    >
-      <motion.div variants={itemVariants} className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-widest uppercase text-white">
-          Collector <span className="text-gold-gradient">Profile</span>
-        </h1>
-      </motion.div>
+    <div className="relative min-h-screen bg-[#080a0d]">
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* LEFT — Identity Card */}
+      {/* ── Atmospheric background ── */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Game-adaptive ambient bloom */}
         <motion.div
-          variants={itemVariants}
-          className="lg:col-span-1 border vault-border bg-vault-900/50 backdrop-blur-sm rounded-sm relative overflow-hidden flex flex-col items-center p-8 h-fit"
+          key={primaryGame}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.2 }}
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[480px] rounded-full blur-[180px]"
+          style={{ background: `radial-gradient(ellipse, ${gameCfg.color}09 0%, transparent 70%)` }}
+        />
+        {/* Hexagonal micro-grid */}
+        <div
+          className="absolute inset-0 opacity-[0.018]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='56' height='48' viewBox='0 0 56 48' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 2L54 16v16L28 46 2 32V16Z' fill='none' stroke='%23d4af37' stroke-width='0.5'/%3E%3C/svg%3E")`,
+            backgroundSize: "56px 48px",
+          }}
+        />
+        {/* Faint bottom vignette */}
+        <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-[#080a0d] to-transparent" />
+      </div>
+
+      <div className="relative z-10 max-w-5xl mx-auto px-5 lg:px-10 py-10">
+
+        {/* ══════════════════════════════════════════════
+            HERO PANEL
+        ══════════════════════════════════════════════ */}
+        <motion.div
+          initial={{ opacity: 0, y: -24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: "easeOut" }}
+          className="relative overflow-hidden rounded-3xl mb-5"
+          style={{
+            background: "linear-gradient(160deg, #13161d 0%, #0d0f14 50%, #090b10 100%)",
+            border: "1px solid rgba(255,255,255,0.06)",
+            boxShadow: `0 0 100px ${gameCfg.color}06, inset 0 1px 0 rgba(255,255,255,0.04)`,
+          }}
         >
-          <div className="absolute top-0 inset-x-0 h-1 bg-gold-gradient opacity-80 block" />
+          {/* Game-color top accent line */}
+          <div
+            className="absolute top-0 inset-x-0 h-px"
+            style={{ background: `linear-gradient(90deg, transparent, ${gameCfg.color}70, transparent)` }}
+          />
+          {/* Side ambient wash */}
+          <div
+            className="absolute top-0 left-0 bottom-0 w-48 opacity-[0.04]"
+            style={{ background: `linear-gradient(to right, ${gameCfg.color}, transparent)` }}
+          />
 
-          {/* Avatar */}
-          <div className="relative mb-6 group" onClick={() => fileInputRef.current?.click()}>
-            <div className="absolute -inset-1 rounded-full bg-[conic-gradient(from_0deg,transparent_0_300deg,#D4A017_360deg)] animate-[spin_3s_linear_infinite] opacity-70 group-hover:opacity-100 transition-opacity" />
-            <div className="relative w-36 h-36 rounded-full border-4 border-vault-900 overflow-hidden flex items-center justify-center bg-gradient-to-br from-vault-800 to-vault-950 cursor-pointer z-10">
-              {avatarUrl ? (
-                <Image src={avatarUrl} alt="Avatar" fill className="object-cover" />
-              ) : (
-                <span className="text-5xl font-bold text-transparent bg-clip-text bg-gold-gradient uppercase">
-                  {displayName.charAt(0) || email.charAt(0) || "C"}
-                </span>
-              )}
-              <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-[2px]">
-                {uploadAvatar.isPending ? (
-                  <Loader2 className="h-8 w-8 animate-spin text-gold-400" />
+          <div className="px-6 sm:px-10 py-10 flex flex-col sm:flex-row items-center sm:items-start gap-8">
+
+            {/* ── Avatar ── */}
+            <div className="relative flex-shrink-0 group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+              {/* Rotating border ring */}
+              <div
+                className="absolute -inset-[3px] rounded-[20px] transition-opacity duration-300 opacity-50 group-hover:opacity-100"
+                style={{
+                  background: `conic-gradient(from 0deg, transparent 0 60%, ${gameCfg.color} 80%, transparent 100%)`,
+                  animation: "spin 5s linear infinite",
+                }}
+              />
+              {/* Static border layer */}
+              <div
+                className="absolute -inset-[1px] rounded-[18px] opacity-30"
+                style={{ background: `linear-gradient(135deg, ${gameCfg.color}40, transparent 60%)` }}
+              />
+
+              {/* Avatar frame — octagonal clip */}
+              <div
+                className="relative w-36 h-36 sm:w-40 sm:h-40 rounded-[18px] overflow-hidden bg-[#0a0c12] z-10"
+                style={{ clipPath: "polygon(15% 0%,85% 0%,100% 15%,100% 85%,85% 100%,15% 100%,0% 85%,0% 15%)" }}
+              >
+                {avatarUrl ? (
+                  <Image src={avatarUrl} alt={displayName} fill className="object-cover" />
                 ) : (
-                  <>
-                    <Camera className="h-8 w-8 text-white mb-2" />
-                    <span className="text-xs font-bold tracking-widest uppercase text-white">
-                      Change Photo
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span
+                      className="font-display text-5xl font-bold"
+                      style={{
+                        background: `linear-gradient(135deg, ${gameCfg.color}, #d4af37)`,
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        backgroundClip: "text",
+                      }}
+                    >
+                      {(displayName.charAt(0) || "C").toUpperCase()}
                     </span>
-                  </>
-                )}
-              </div>
-            </div>
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleAvatarChange}
-            />
-          </div>
-
-          {/* Identity Info */}
-          <div className="w-full flex flex-col items-center mb-6">
-            <div className="flex items-center gap-3 mb-2 h-10">
-              {isEditingName ? (
-                <div className="flex items-center gap-2 w-full max-w-[200px]">
-                  <input
-                    type="text"
-                    value={draftName}
-                    onChange={(e) => setDraftName(e.target.value)}
-                    autoFocus
-                    onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
-                    className="w-full bg-vault-950 border border-gold-500/50 rounded-sm py-1.5 px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-gold-500 font-bold text-center"
-                  />
-                  <button
-                    onClick={handleSaveName}
-                    disabled={updateDisplayName.isPending}
-                    className="p-1.5 bg-gold-500/20 text-gold-400 rounded-sm hover:bg-gold-500/40 transition-colors"
-                  >
-                    {updateDisplayName.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Check className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              ) : (
-                <div
-                  className="flex items-center gap-2 group cursor-pointer"
-                  onClick={handleEditName}
-                  title="Click to edit name"
-                >
-                  <h2 className="text-2xl font-bold text-white group-hover:text-gold-400 transition-colors text-center">
-                    {displayName}
-                  </h2>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-center gap-2 mb-2">
-              {plan === "PRO" ? (
-                <div className="px-3 py-0.5 rounded-full bg-gold-500/10 border border-gold-500/40 text-gold-400 text-xs font-bold tracking-widest shadow-[0_0_12px_rgba(212,160,23,0.3)] flex items-center gap-1.5 uppercase">
-                  <Star className="w-3 h-3 fill-gold-400" />
-                  PRO Member
-                </div>
-              ) : (
-                <div className="px-3 py-0.5 rounded-full bg-vault-800 border border-vault-700 text-vault-400 text-xs font-bold tracking-widest uppercase">
-                  FREE Plan
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 text-vault-400 text-sm mt-3 bg-vault-950/50 px-3 py-1.5 rounded-sm border vault-border">
-              <Lock className="w-3 h-3" />
-              <span className="truncate">{email}</span>
-            </div>
-
-            {memberSince && (
-              <p className="text-[10px] text-vault-500 mt-4 font-medium uppercase tracking-wider">
-                Member since {memberSince}
-              </p>
-            )}
-          </div>
-
-          <div className="w-full h-px border-b vault-border mb-6 border-dashed" />
-
-          {/* Game Badges */}
-          <div className="w-full">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-vault-500 mb-3 text-center">
-              Active Collections
-            </h4>
-            {games.length > 0 ? (
-              <div className="flex flex-wrap justify-center gap-2">
-                {games.map((game) => (
-                  <div
-                    key={game}
-                    className="px-3 py-1.5 bg-vault-800/80 border vault-border rounded-sm text-xs font-bold text-vault-300 flex items-center gap-1.5"
-                  >
-                    <Gamepad className="w-3 h-3 text-gold-500" />
-                    {game}
                   </div>
-                ))}
+                )}
+                {/* Camera overlay */}
+                <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-sm">
+                  {uploadAvatar.isPending
+                    ? <Loader2 className="w-6 h-6 animate-spin text-gold-400" />
+                    : <>
+                        <Camera className="w-6 h-6 text-white mb-1" />
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-white">Change</span>
+                      </>
+                  }
+                </div>
               </div>
-            ) : (
-              <p className="text-xs text-vault-500 text-center italic">No games added yet.</p>
-            )}
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleAvatarChange}
+              />
+            </div>
+
+            {/* ── Identity ── */}
+            <div className="flex-1 min-w-0 flex flex-col items-center sm:items-start text-center sm:text-left pt-1">
+
+              {/* Eyebrow */}
+              <p className="text-[9px] font-bold text-gold-400/50 uppercase tracking-[0.3em] mb-2">
+                Vault · Collector Profile
+              </p>
+
+              {/* Display name — editable */}
+              <div className="mb-3 h-10 flex items-center">
+                <AnimatePresence mode="wait">
+                  {isEditingName ? (
+                    <motion.div
+                      key="editing"
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 4 }}
+                      className="flex items-center gap-2"
+                    >
+                      <input
+                        type="text"
+                        value={draftName}
+                        onChange={(e) => setDraftName(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+                        autoFocus
+                        className="font-display text-2xl font-bold bg-transparent border-b-2 border-gold-500/50 text-white focus:outline-none focus:border-gold-400 pb-0.5 min-w-[180px]"
+                      />
+                      <button
+                        onClick={handleSaveName}
+                        disabled={updateDisplayName.isPending}
+                        className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
+                        style={{ background: "rgba(212,175,55,0.15)", border: "1px solid rgba(212,175,55,0.3)", color: "#d4af37" }}
+                      >
+                        {updateDisplayName.isPending
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Check className="w-3.5 h-3.5" />}
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <motion.button
+                      key="display"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      onClick={() => { setDraftName(displayName); setIsEditingName(true); }}
+                      className="group/name flex items-center gap-2.5"
+                    >
+                      <h1 className="font-display text-3xl sm:text-4xl font-bold text-white group-hover/name:text-gold-300 transition-colors leading-none">
+                        {displayName}
+                      </h1>
+                      <Pencil className="w-4 h-4 text-gray-800 opacity-0 group-hover/name:opacity-100 group-hover/name:text-gold-600 transition-all" />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Plan + email */}
+              <div className="flex flex-wrap items-center gap-2.5 mb-3 justify-center sm:justify-start">
+                {plan === "PRO" ? (
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-500/10 border border-gold-500/35 text-gold-400 text-xs font-bold uppercase tracking-widest">
+                    <Star className="w-3 h-3 fill-gold-400" />
+                    Pro Member
+                  </span>
+                ) : (
+                  <Link
+                    href="/settings"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/4 border border-white/10 text-gray-500 text-xs font-bold uppercase tracking-widest hover:border-gold-500/25 hover:text-gold-600/70 transition-all"
+                  >
+                    Free Plan
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </Link>
+                )}
+                <span className="flex items-center gap-1.5 text-xs text-gray-600">
+                  <Lock className="w-2.5 h-2.5" />
+                  {email}
+                </span>
+              </div>
+
+              {/* Member since */}
+              {memberSince && (
+                <p className="text-[10px] text-gray-700 uppercase tracking-[0.2em] font-semibold mb-4">
+                  Member since {memberSince}
+                </p>
+              )}
+
+              {/* Game collection pills */}
+              {games.length > 0 ? (
+                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                  {games.map((game) => {
+                    const cfg = GAME_CONFIG[game] ?? { color: "#d4af37", symbol: "◈" };
+                    return (
+                      <span
+                        key={game}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                        style={{
+                          background: `${cfg.color}10`,
+                          border: `1px solid ${cfg.color}28`,
+                          color: cfg.color,
+                        }}
+                      >
+                        <span>{cfg.symbol}</span>
+                        {game}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-700 italic">No cards in collection yet.</p>
+              )}
+            </div>
+
+            {/* Settings shortcut */}
+            <Link
+              href="/settings"
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/8 bg-white/3 hover:bg-white/6 text-gray-600 hover:text-gray-300 text-xs font-medium transition-all self-start"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              Settings
+            </Link>
           </div>
         </motion.div>
 
-        {/* RIGHT — Stats & Activity */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Stats */}
-          <motion.div variants={itemVariants} className="space-y-4">
-            <h3 className="text-lg font-bold tracking-widest uppercase text-white flex items-center gap-2 border-b vault-border pb-2">
-              <TrendingUp className="w-5 h-5 text-gold-400" />
-              Collection <span className="text-vault-400">Overview</span>
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <motion.div
-                whileHover={{ y: -2, borderColor: "rgba(212,160,23,0.3)" }}
-                className="bg-vault-900/50 backdrop-blur-sm border vault-border rounded-sm p-5 flex items-start gap-4 transition-all"
+        {/* ══════════════════════════════════════════════
+            STATS ROW
+        ══════════════════════════════════════════════ */}
+        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5">
+          {[
+            {
+              label:   "Cards in Vault",
+              value:   Math.round(animCards).toLocaleString(),
+              icon:    Layers,
+              color:   "#d4af37",
+              delay:   0.18,
+            },
+            {
+              label:   "Collection Value",
+              value:   `€${animValue.toFixed(0)}`,
+              icon:    TrendingUp,
+              color:   "#4ade80",
+              delay:   0.24,
+            },
+            {
+              label:   "Decks Built",
+              value:   Math.round(animDecks).toString(),
+              icon:    LayoutGrid,
+              color:   "#60a5fa",
+              delay:   0.30,
+            },
+          ].map(({ label, value, icon: Icon, color, delay }) => (
+            <motion.div
+              key={label}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay, duration: 0.45 }}
+              className="relative overflow-hidden rounded-2xl p-4 sm:p-5 border border-white/6 bg-[#11141a] group hover:border-white/10 transition-colors"
+            >
+              {/* Hover glow */}
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                style={{ background: `radial-gradient(ellipse at 20% 30%, ${color}06, transparent)` }}
+              />
+              {/* Icon */}
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center mb-3"
+                style={{ background: `${color}14`, border: `1px solid ${color}22` }}
               >
-                <div className="w-10 h-10 rounded-sm bg-vault-800 border vault-border flex items-center justify-center shrink-0">
-                  <Layers className="w-5 h-5 text-gold-400" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-vault-400 mb-1">
-                    Total Cards
-                  </p>
-                  <p className="text-2xl font-bold font-mono text-white">
-                    {stats?.totalCards ?? 0}
-                  </p>
-                </div>
-              </motion.div>
+                <Icon className="w-3.5 h-3.5" style={{ color }} />
+              </div>
+              {/* Value */}
+              <p className="font-mono font-bold text-xl sm:text-2xl text-white leading-none mb-1">{value}</p>
+              {/* Label */}
+              <p className="text-[9px] font-bold text-gray-700 uppercase tracking-widest">{label}</p>
 
-              <motion.div
-                whileHover={{ y: -2, borderColor: "rgba(212,160,23,0.3)" }}
-                className="bg-vault-900/50 backdrop-blur-sm border vault-border rounded-sm p-5 flex items-start gap-4 transition-all"
+              {/* Corner accent */}
+              <div
+                className="absolute top-0 right-0 w-12 h-12 opacity-[0.04] pointer-events-none"
+                style={{ background: `radial-gradient(circle at top right, ${color}, transparent)` }}
+              />
+            </motion.div>
+          ))}
+        </div>
+
+        {/* ══════════════════════════════════════════════
+            CONTENT ROW — Activity + Badges
+        ══════════════════════════════════════════════ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* ── Recent Activity ── */}
+          <motion.div
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.35, duration: 0.5 }}
+            className="rounded-2xl overflow-hidden border border-white/6 bg-[#11141a] flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/6">
+              <div className="flex items-center gap-2">
+                <History className="w-3.5 h-3.5 text-gold-400" />
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
+                  Recent Activity
+                </span>
+              </div>
+              <Link
+                href="/collection"
+                className="text-[10px] text-gray-700 hover:text-gold-500 transition-colors uppercase tracking-widest"
               >
-                <div className="w-10 h-10 rounded-sm bg-vault-800 border vault-border flex items-center justify-center shrink-0">
-                  <Award className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-vault-400 mb-1">
-                    Total Value
+                View all →
+              </Link>
+            </div>
+
+            {/* Rows */}
+            <div className="flex-1 divide-y divide-white/[0.04]">
+              {recentActivity.length === 0 ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center">
+                  <div className="w-10 h-10 rounded-xl bg-white/3 border border-white/6 flex items-center justify-center mb-3">
+                    <History className="w-4 h-4 text-gray-700" />
+                  </div>
+                  <p className="text-sm text-gray-600">No activity yet</p>
+                  <p className="text-xs text-gray-800 mt-1">
+                    Cards you add will appear here.
                   </p>
-                  <p className="text-2xl font-bold font-mono text-white">
-                    $
-                    {(stats?.totalValue ?? 0).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
                 </div>
-              </motion.div>
+              ) : (
+                recentActivity.map((item, i) => {
+                  const cfg = GAME_CONFIG[item.game] ?? { color: "#d4af37", symbol: "◈" };
+                  return (
+                    <motion.div
+                      key={item.id ?? i}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 + i * 0.04 }}
+                      className="flex items-center gap-3 px-5 py-3 hover:bg-white/[0.025] transition-colors group/row"
+                    >
+                      {/* Game symbol badge */}
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-sm"
+                        style={{
+                          background: `${cfg.color}10`,
+                          border: `1px solid ${cfg.color}20`,
+                          color: cfg.color,
+                        }}
+                      >
+                        {cfg.symbol}
+                      </div>
+
+                      {/* Card info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate group-hover/row:text-gold-300 transition-colors leading-snug">
+                          {item.card_name}
+                        </p>
+                        <p className="text-[10px] text-gray-700 font-mono leading-none mt-0.5">
+                          {new Date(item.created_at).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </div>
+
+                      {/* Price */}
+                      <span className="font-mono text-xs font-bold text-emerald-400 flex-shrink-0">
+                        €{item.price.toFixed(2)}
+                      </span>
+                    </motion.div>
+                  );
+                })
+              )}
             </div>
           </motion.div>
 
-          {/* Activity + Badges */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Recent Activity */}
-            <motion.div variants={itemVariants} className="space-y-4 flex flex-col h-full">
-              <h3 className="text-lg font-bold tracking-widest uppercase text-white flex items-center gap-2 border-b vault-border pb-2">
-                <History className="w-5 h-5 text-gold-400" />
-                Recent <span className="text-vault-400">Activity</span>
-              </h3>
-
-              <div className="bg-vault-900/40 rounded-sm border vault-border overflow-hidden flex-1">
-                {recentActivity.length > 0 ? (
-                  <div className="divide-y divide-vault-800">
-                    {recentActivity.map((item, idx) => (
-                      <div
-                        key={item.id ?? idx}
-                        className="p-3.5 hover:bg-vault-800/50 transition-colors flex justify-between items-center group"
-                      >
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-white group-hover:text-gold-400 transition-colors line-clamp-1">
-                            {item.card_name}
-                          </span>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[9px] uppercase font-bold tracking-wider text-vault-400 px-1.5 py-0.5 rounded-sm bg-vault-950 border vault-border">
-                              {item.game}
-                            </span>
-                            <span className="text-[10px] text-vault-500 font-mono">
-                              {new Date(item.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-xs font-mono font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1.5 rounded-sm border border-emerald-400/20">
-                          ${item.price.toFixed(2)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-8 h-full text-center flex flex-col items-center justify-center">
-                    <History className="w-8 h-8 text-vault-700 mb-2" />
-                    <p className="text-sm text-vault-400">No activity yet</p>
-                    <p className="text-xs text-vault-500 mt-1">Added cards will appear here.</p>
-                  </div>
-                )}
+          {/* ── Achievement Badges ── */}
+          <motion.div
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.35, duration: 0.5 }}
+            className="rounded-2xl overflow-hidden border border-white/6 bg-[#11141a] flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/6">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-3.5 h-3.5 text-gold-400" />
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
+                  Collector Badges
+                </span>
               </div>
-            </motion.div>
+              <span className="text-[10px] text-gray-700 uppercase tracking-widest font-mono">
+                {unlockedCount}/{badges.length}
+              </span>
+            </div>
 
-            {/* Collector Badges */}
-            <motion.div variants={itemVariants} className="space-y-4 flex flex-col h-full">
-              <h3 className="text-lg font-bold tracking-widest uppercase text-white flex items-center gap-2 border-b vault-border pb-2">
-                <Trophy className="w-5 h-5 text-gold-400" />
-                Collector <span className="text-vault-400">Badges</span>
-              </h3>
-
-              <div className="grid grid-cols-2 gap-3 flex-1">
-                {collectorBadges.map((badge) => (
-                  <motion.div
-                    key={badge.id}
-                    className={`relative p-4 rounded-sm border flex flex-col items-center text-center overflow-hidden transition-all duration-300 ${
-                      badge.unlocked
-                        ? "bg-vault-900 border-gold-500/40 shadow-[0_0_15px_rgba(212,160,23,0.1)] hover:shadow-[0_0_20px_rgba(212,160,23,0.2)]"
-                        : "bg-vault-950/50 border-vault-800 opacity-60 grayscale"
-                    }`}
-                  >
-                    {badge.unlocked && (
-                      <motion.div
-                        initial={{ opacity: 0.3, scale: 0.8 }}
-                        animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.05, 1] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute inset-0 bg-gold-400/5 z-0"
+            {/* Badge grid */}
+            <div className="grid grid-cols-2 gap-3 p-4">
+              {badges.map((badge, i) => (
+                <motion.div
+                  key={badge.id}
+                  initial={{ opacity: 0, scale: 0.88 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.42 + i * 0.07, type: "spring", damping: 18 }}
+                  className="relative overflow-hidden rounded-xl p-4 border group/badge transition-all duration-300"
+                  style={{
+                    background: badge.unlocked
+                      ? `linear-gradient(145deg, ${badge.color}08 0%, rgba(255,255,255,0.02) 100%)`
+                      : "rgba(255,255,255,0.02)",
+                    borderColor: badge.unlocked ? `${badge.color}25` : "rgba(255,255,255,0.05)",
+                  }}
+                >
+                  {/* Shine sweep on hover */}
+                  {badge.unlocked && (
+                    <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                      <div
+                        className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent -translate-x-full group-hover/badge:translate-x-[250%] transition-transform duration-700 ease-in-out"
                       />
-                    )}
-                    <div className="relative z-10 w-full flex flex-col items-center">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${
-                          badge.unlocked
-                            ? "bg-gold-500/20 text-gold-400"
-                            : "bg-vault-800 text-vault-500"
-                        }`}
-                      >
-                        {badge.unlocked ? (
-                          <Trophy className="w-5 h-5" />
-                        ) : (
-                          <Lock className="w-4 h-4" />
-                        )}
-                      </div>
-                      <h4
-                        className={`text-xs font-bold uppercase tracking-widest mb-1.5 ${
-                          badge.unlocked ? "text-gold-400" : "text-vault-400"
-                        }`}
-                      >
-                        {badge.name}
-                      </h4>
-                      <p className="text-[10px] text-vault-400 leading-tight">
-                        {badge.description}
-                      </p>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
+                  )}
+
+                  {/* Lock icon (locked state) */}
+                  {!badge.unlocked && (
+                    <Lock className="absolute top-2.5 right-2.5 w-3 h-3 text-gray-800" />
+                  )}
+
+                  {/* Badge symbol */}
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl mb-3 transition-transform duration-300 group-hover/badge:scale-110"
+                    style={{
+                      background: badge.unlocked ? `${badge.color}12` : "rgba(255,255,255,0.04)",
+                      border: badge.unlocked ? `1px solid ${badge.color}25` : "1px solid rgba(255,255,255,0.06)",
+                      filter: badge.unlocked ? "none" : "grayscale(1) opacity(0.2)",
+                    }}
+                  >
+                    <span style={{ color: badge.unlocked ? badge.color : "transparent" }}>
+                      {badge.symbol}
+                    </span>
+                  </div>
+
+                  <p
+                    className="text-[11px] font-bold uppercase tracking-widest mb-1 leading-none"
+                    style={{ color: badge.unlocked ? badge.color : "rgba(255,255,255,0.15)" }}
+                  >
+                    {badge.name}
+                  </p>
+                  <p
+                    className="text-[10px] leading-snug"
+                    style={{ color: badge.unlocked ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.08)" }}
+                  >
+                    {badge.desc}
+                  </p>
+
+                  {/* Subtle glow for unlocked */}
+                  {badge.unlocked && (
+                    <motion.div
+                      className="absolute inset-0 rounded-xl pointer-events-none"
+                      animate={{ opacity: [0.3, 0.7, 0.3] }}
+                      transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: i * 0.6 }}
+                      style={{ background: `radial-gradient(ellipse at 30% 20%, ${badge.color}06, transparent)` }}
+                    />
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
