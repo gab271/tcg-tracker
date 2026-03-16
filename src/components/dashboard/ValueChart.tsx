@@ -36,7 +36,7 @@ export default function ValueChart() {
             <stop offset="95%" stopColor="#d4af37" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a2e38" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#1a1e28" vertical={false} />
         <XAxis 
           dataKey="date" 
           stroke="#6b7280" 
@@ -53,11 +53,11 @@ export default function ValueChart() {
           tickFormatter={(value) => `$${value >= 1000 ? (value / 1000).toFixed(1) + 'k' : value}`}
         />
         <Tooltip 
-          contentStyle={{ 
-            backgroundColor: '#16191f', 
-            border: '1px solid rgba(212, 175, 55, 0.2)',
-            borderRadius: '8px',
-            boxShadow: '0 0 15px rgba(212, 175, 55, 0.15)'
+          contentStyle={{
+            backgroundColor: '#0d0f14',
+            border: '1px solid rgba(212, 175, 55, 0.25)',
+            borderRadius: '10px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(212, 175, 55, 0.1)'
           }}
           itemStyle={{ color: '#d4af37' }}
           formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Total Value']}
