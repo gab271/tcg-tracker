@@ -1,100 +1,98 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  DndContext, 
+import { useState, useMemo } from "react";
+import {
+  DndContext,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent
-} from '@dnd-kit/core';
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { SortableCardRow } from './SortableCardRow';
-import { createClient } from '@/lib/supabase/client';
+} from "@dnd-kit/sortable";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { SortableCardRow } from "./SortableCardRow";
+import {
+  useUpdateCardOrder,
+  useUpdateCardQuantity,
+  useDeleteDeckCard,
+} from "@/hooks/use-decks";
+import type { DeckRow, DeckCardRow } from "@/lib/supabase/queries/decks";
 
-export default function DeckDetailClient({ initialDeck, initialCards }: { initialDeck: any, initialCards: any[] }) {
-  const [deck, setDeck] = useState(initialDeck);
+interface DeckDetailClientProps {
+  initialDeck: DeckRow;
+  initialCards: DeckCardRow[];
+}
+
+export default function DeckDetailClient({ initialDeck, initialCards }: DeckDetailClientProps) {
+  const [deck] = useState(initialDeck);
   const [cards, setCards] = useState(initialCards);
-  const [isSaving, setIsSaving] = useState(false);
-  const supabase = createClient();
+
+  const updateOrder = useUpdateCardOrder();
+  const updateQuantity = useUpdateCardQuantity();
+  const deleteCard = useDeleteDeckCard();
+
+  const isSaving = updateOrder.isPending;
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // Legality Check
-  const totalCards = useMemo(() => cards.reduce((sum, card) => sum + card.quantity, 0), [cards]);
-  const totalValue = useMemo(() => cards.reduce((sum, card) => sum + (card.price * card.quantity), 0), [cards]);
-  
-  const expectedCards = deck.game === 'One Piece' ? 50 : 60;
+  const totalCards = useMemo(
+    () => cards.reduce((sum, card) => sum + card.quantity, 0),
+    [cards]
+  );
+  const totalValue = useMemo(
+    () => cards.reduce((sum, card) => sum + card.price * card.quantity, 0),
+    [cards]
+  );
+
+  const expectedCards = deck.game === "One Piece" ? 50 : 60;
   const isLegal = totalCards === expectedCards;
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    if (active.id !== over?.id) {
-      const oldIndex = cards.findIndex(c => c.id === active.id);
-      const newIndex = cards.findIndex(c => c.id === over?.id);
-      
-      const newCards = arrayMove(cards, oldIndex, newIndex);
-      setCards(newCards);
+    const oldIndex = cards.findIndex((c) => c.id === active.id);
+    const newIndex = cards.findIndex((c) => c.id === over.id);
+    const reordered = arrayMove(cards, oldIndex, newIndex);
 
-      // Save new order slowly via debounce or straight away
-      setIsSaving(true);
-      
-      const updates = newCards.map((card, index) => ({
-        id: card.id,
-        order_index: index
-      }));
-
-      // A simple loop update (in production, a bulk upsert is better)
-      for (const update of updates) {
-        await supabase
-          .from('deck_cards')
-          .update({ order_index: update.order_index })
-          .eq('id', update.id);
-      }
-      
-      setIsSaving(false);
-    }
+    setCards(reordered);
+    updateOrder.mutate(reordered.map((card, index) => ({ id: card.id, order_index: index })));
   };
 
-  const removeCard = async (cardId: string) => {
-    setCards(cards.filter(c => c.id !== cardId));
-    await supabase.from('deck_cards').delete().eq('id', cardId);
+  const handleRemove = (cardId: string) => {
+    setCards((prev) => prev.filter((c) => c.id !== cardId));
+    deleteCard.mutate(cardId);
   };
 
-  const updateQuantity = async (cardId: string, delta: number) => {
-    const card = cards.find(c => c.id === cardId);
+  const handleUpdateQuantity = (cardId: string, delta: number) => {
+    const card = cards.find((c) => c.id === cardId);
     if (!card) return;
-    
+
     const newQty = card.quantity + delta;
     if (newQty <= 0) {
-      await removeCard(cardId);
+      handleRemove(cardId);
       return;
     }
 
-    setCards(cards.map(c => c.id === cardId ? { ...c, quantity: newQty } : c));
-    await supabase.from('deck_cards').update({ quantity: newQty }).eq('id', cardId);
+    setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, quantity: newQty } : c)));
+    updateQuantity.mutate({ cardId, quantity: newQty });
   };
 
   return (
     <div className="space-y-6">
-      {/* Header Area */}
+      {/* Header */}
       <div className="bg-[#121212] border border-[#D4A017]/20 rounded-2xl p-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#D4A017]/5 blur-[100px] rounded-full point-events-none" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#D4A017]/5 blur-[100px] rounded-full pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -105,26 +103,38 @@ export default function DeckDetailClient({ initialDeck, initialCards }: { initia
                 {deck.game}
               </span>
             </div>
-            
+
             <div className="mt-4 flex flex-wrap gap-4">
               <div className="flex flex-col bg-[#0a0a0a] border border-[#222] px-4 py-2 rounded-xl">
                 <span className="text-xs text-gray-500 uppercase font-bold tracking-wider">Value</span>
                 <span className="text-xl font-bold text-white">${totalValue.toFixed(2)}</span>
               </div>
-              <div className={`flex flex-col border px-4 py-2 rounded-xl transition-colors ${isLegal ? 'bg-green-950/30 border-green-500/30' : 'bg-red-950/30 border-red-500/30'}`}>
-                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Cards Status</span>
-                <span className={`text-xl font-bold ${isLegal ? 'text-green-400' : 'text-red-400'}`}>
+              <div
+                className={`flex flex-col border px-4 py-2 rounded-xl transition-colors ${
+                  isLegal
+                    ? "bg-green-950/30 border-green-500/30"
+                    : "bg-red-950/30 border-red-500/30"
+                }`}
+              >
+                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">
+                  Cards Status
+                </span>
+                <span
+                  className={`text-xl font-bold ${isLegal ? "text-green-400" : "text-red-400"}`}
+                >
                   {totalCards} / {expectedCards}
                   <span className="text-sm font-normal ml-2 opacity-80">
-                    {isLegal ? 'Legal' : 'Invalid Size'}
+                    {isLegal ? "Legal" : "Invalid Size"}
                   </span>
                 </span>
               </div>
             </div>
           </div>
-          
+
           <div className="mt-6 md:mt-0">
-            {isSaving && <div className="text-xs text-[#D4A017] animate-pulse">Saving order...</div>}
+            {isSaving && (
+              <div className="text-xs text-[#D4A017] animate-pulse">Saving order...</div>
+            )}
             <button className="bg-[#1a1a1a] hover:bg-[#222] text-[#D4A017] border border-[#D4A017]/30 font-semibold py-2 px-6 rounded-lg transition-all shadow-[0_0_15px_rgba(212,160,23,0.1)] hover:shadow-[0_0_20px_rgba(212,160,23,0.3)] mt-2">
               + Find & Add Cards
             </button>
@@ -135,7 +145,7 @@ export default function DeckDetailClient({ initialDeck, initialCards }: { initia
       {/* Cards List with DnD */}
       <div className="bg-[#121212] rounded-2xl border border-[#222] overflow-hidden p-1">
         <div className="grid grid-cols-[auto_1fr_auto_auto] gap-4 p-4 text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-[#222]">
-          <div className="w-8"></div>
+          <div className="w-8" />
           <div>Card Name</div>
           <div className="text-right w-24">Price</div>
           <div className="text-right w-24">Quantity</div>
@@ -147,22 +157,22 @@ export default function DeckDetailClient({ initialDeck, initialCards }: { initia
             <p className="text-gray-500">Search the market or your collection to add some.</p>
           </div>
         ) : (
-          <DndContext 
+          <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
             modifiers={[restrictToVerticalAxis]}
           >
-            <SortableContext 
-              items={cards.map(c => c.id)}
+            <SortableContext
+              items={cards.map((c) => c.id)}
               strategy={verticalListSortingStrategy}
             >
               <div className="flex flex-col divide-y divide-[#222]/50">
-                {cards.map(card => (
-                  <SortableCardRow 
-                    key={card.id} 
-                    card={card} 
-                    onUpdateQuantity={updateQuantity}
+                {cards.map((card) => (
+                  <SortableCardRow
+                    key={card.id}
+                    card={card}
+                    onUpdateQuantity={handleUpdateQuantity}
                   />
                 ))}
               </div>

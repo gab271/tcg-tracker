@@ -1,80 +1,84 @@
-'use client';
+"use client";
 
-import { useState, useMemo, useEffect } from 'react';
-import { DeckCard } from './DeckCard';
-import CreateDeckModal from './CreateDeckModal';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useMemo } from "react";
+import { DeckCard } from "./DeckCard";
+import CreateDeckModal from "./CreateDeckModal";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import { useCountUp } from "@/hooks/use-count-up";
+import type { DeckRow } from "@/lib/supabase/queries/decks";
 
-const TABS = ['All', 'Pokémon', 'Magic: The Gathering', 'One Piece', 'Yu-Gi-Oh!'];
+const TABS = ["All", "Pokémon", "Magic: The Gathering", "One Piece", "Yu-Gi-Oh!"];
 
-// Custom hook for animating numbers
-function useCountUp(end: number, duration: number = 2) {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    let startTime: number | null = null;
-    let animationFrameId: number;
-
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
-      
-      // easeOutExpo
-      const easeProgress = 1 - Math.pow(1 - progress, 3);
-      
-      setCount(end * easeProgress);
-
-      if (progress < 1) {
-        animationFrameId = requestAnimationFrame(animate);
-      }
-    };
-
-    animationFrameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [end, duration]);
-
-  return count;
+interface DecksClientProps {
+  initialDecks: DeckRow[];
+  totalValue?: number;
+  totalCards?: number;
 }
 
-export default function DecksClient({ initialDecks, totalValue = 0, totalCards = 0 }: { initialDecks: any[], totalValue?: number, totalCards?: number }) {
+export default function DecksClient({
+  initialDecks,
+  totalValue = 0,
+  totalCards = 0,
+}: DecksClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [decks] = useState(initialDecks);
-  const [activeTab, setActiveTab] = useState('All');
+  const [decks, setDecks] = useState(initialDecks);
+  const [activeTab, setActiveTab] = useState("All");
 
   const animatedDecks = useCountUp(decks.length);
   const animatedCards = useCountUp(totalCards);
   const animatedValue = useCountUp(totalValue);
 
   const filteredDecks = useMemo(() => {
-    if (activeTab === 'All') return decks;
-    return decks.filter(d => d.game === activeTab);
+    if (activeTab === "All") return decks;
+    return decks.filter((d) => d.game === activeTab);
   }, [decks, activeTab]);
+
+  // Called after successful deck creation — refetch is handled by React Query,
+  // but we get a fresh server-side list via router.refresh() inside the modal.
+  // For now we optimistically add nothing here; React Query invalidation handles it.
+  const handleDeckCreated = () => {
+    // DecksClient receives initialDecks as server props.
+    // A full refresh will re-run the server component and pass updated props.
+    // If this page is fully client-driven later, swap to useDecks() hook.
+    window.location.reload();
+  };
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-6">
-      {/* HEADER SECTION */}
+      {/* HEADER */}
       <div className="mb-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-6">
           <div>
             <h1 className="text-4xl font-extrabold text-white mb-2">My Decks</h1>
-            <div className="w-16 h-1 bg-[#D4A017] rounded-full mb-6"></div>
-            
-            {/* Stats Row */}
+            <div className="w-16 h-1 bg-[#D4A017] rounded-full mb-6" />
+
             <div className="flex gap-6 text-sm">
               <div className="flex flex-col">
-                <span className="text-gray-500 uppercase tracking-widest text-[10px]">Total Decks</span>
-                <span className="text-xl font-bold font-mono text-white">{Math.round(animatedDecks)}</span>
+                <span className="text-gray-500 uppercase tracking-widest text-[10px]">
+                  Total Decks
+                </span>
+                <span className="text-xl font-bold font-mono text-white">
+                  {Math.round(animatedDecks)}
+                </span>
               </div>
-              <div className="w-px h-8 bg-gray-800"></div>
+              <div className="w-px h-8 bg-gray-800" />
               <div className="flex flex-col">
-                <span className="text-gray-500 uppercase tracking-widest text-[10px]">Total Cards</span>
-                <span className="text-xl font-bold font-mono text-white">{Math.round(animatedCards)}</span>
+                <span className="text-gray-500 uppercase tracking-widest text-[10px]">
+                  Total Cards
+                </span>
+                <span className="text-xl font-bold font-mono text-white">
+                  {Math.round(animatedCards)}
+                </span>
               </div>
-              <div className="w-px h-8 bg-gray-800"></div>
+              <div className="w-px h-8 bg-gray-800" />
               <div className="flex flex-col">
-                <span className="text-gray-500 uppercase tracking-widest text-[10px]">Total Value</span>
-                <span className="text-xl font-bold font-mono text-[#D4A017]">€{animatedValue.toFixed(2)}</span>
+                <span className="text-gray-500 uppercase tracking-widest text-[10px]">
+                  Total Value
+                </span>
+                <span className="text-xl font-bold font-mono text-[#D4A017]">
+                  €{animatedValue.toFixed(2)}
+                </span>
               </div>
             </div>
           </div>
@@ -93,9 +97,11 @@ export default function DecksClient({ initialDecks, totalValue = 0, totalCards =
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`relative px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${activeTab === tab ? 'text-[#D4A017]' : 'text-gray-400 hover:text-gray-200'}`}
+              className={`relative px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                activeTab === tab ? "text-[#D4A017]" : "text-gray-400 hover:text-gray-200"
+              }`}
             >
-              {tab === 'Magic: The Gathering' ? 'Magic' : tab}
+              {tab === "Magic: The Gathering" ? "Magic" : tab}
               {activeTab === tab && (
                 <motion.div
                   layoutId="activeDeckTab"
@@ -111,27 +117,37 @@ export default function DecksClient({ initialDecks, totalValue = 0, totalCards =
 
       {/* DECK GRID */}
       {filteredDecks.length === 0 ? (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="flex flex-col items-center justify-center text-center py-32 rounded-3xl"
         >
-          {/* Vault SVG Icon Placeholder */}
-          <div className="mb-6 opacity-20 transform hover:scale-105 transition-transform duration-500">
-            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#D4A017" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              <circle cx="12" cy="16" r="1"></circle>
+          <div className="mb-6 opacity-20">
+            <svg
+              width="120"
+              height="120"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#D4A017"
+              strokeWidth="1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              <circle cx="12" cy="16" r="1" />
             </svg>
           </div>
-          <h2 className="text-3xl font-extrabold text-white mb-3">Your vault has no decks yet</h2>
+          <h2 className="text-3xl font-extrabold text-white mb-3">
+            Your vault has no decks yet
+          </h2>
           <p className="text-gray-400 text-lg mb-8 max-w-md mx-auto">
-            {activeTab === 'All' 
+            {activeTab === "All"
               ? "Build your first deck and start tracking its value"
               : `You don't have any ${activeTab} decks yet.`}
           </p>
-          {activeTab === 'All' && (
+          {activeTab === "All" && (
             <button
               onClick={() => setIsModalOpen(true)}
               className="bg-[#D4A017] text-black font-bold py-3 px-8 rounded-xl hover:bg-[#F2C84B] transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(212,160,23,0.3)]"
@@ -156,7 +172,10 @@ export default function DecksClient({ initialDecks, totalValue = 0, totalCards =
                 key={deck.id}
                 className="w-full flex justify-center md:block"
               >
-                <Link href={`/decks/${deck.id}`} className="w-full max-w-[280px] md:max-w-none block">
+                <Link
+                  href={`/decks/${deck.id}`}
+                  className="w-full max-w-[280px] md:max-w-none block"
+                >
                   <DeckCard deck={deck} />
                 </Link>
               </motion.div>
@@ -165,11 +184,10 @@ export default function DecksClient({ initialDecks, totalValue = 0, totalCards =
         </motion.div>
       )}
 
-      {/* MODAL IS INSIDE THE CLIENT BUT HANDLES ITS OWN PRESENCE internally by wrapping with AnimatePresence and conditional rendering */}
       <CreateDeckModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSuccess={() => window.location.reload()}
+        onSuccess={handleDeckCreated}
       />
     </div>
   );

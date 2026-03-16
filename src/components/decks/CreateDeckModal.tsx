@@ -1,63 +1,48 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { createClient } from '@/lib/supabase/client';
-import { logger } from '@/lib/logger';
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useCreateDeck } from "@/hooks/use-decks";
+import { toast } from "sonner";
+import { mapSupabaseError } from "@/lib/errors";
 
 const GAMES = [
-  { name: 'Pokémon', color: '#EF4444' },
-  { name: 'Magic: The Gathering', color: '#3B82F6' },
-  { name: 'One Piece', color: '#EAB308' },
-  { name: 'Yu-Gi-Oh!', color: '#8B5CF6' }
+  { name: "Pokémon", color: "#EF4444" },
+  { name: "Magic: The Gathering", color: "#3B82F6" },
+  { name: "One Piece", color: "#EAB308" },
+  { name: "Yu-Gi-Oh!", color: "#8B5CF6" },
 ];
 
-const FORMATS = ['Standard', 'Expanded', 'Unlimited'];
+const FORMATS = ["Standard", "Expanded", "Unlimited"];
 
-export default function CreateDeckModal({
-  isOpen,
-  onClose,
-  onSuccess,
-}: {
+interface CreateDeckModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [game, setGame] = useState('Pokémon');
-  const [format, setFormat] = useState('Standard');
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const supabase = createClient();
+  onSuccess?: () => void;
+}
+
+export default function CreateDeckModal({ isOpen, onClose, onSuccess }: CreateDeckModalProps) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [game, setGame] = useState("Pokémon");
+  const [format, setFormat] = useState("Standard");
+
+  const createDeck = useCreateDeck();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    setLoading(true);
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) {
-        setLoading(false);
-        return;
-    }
-
-    const { error } = await supabase.from('decks').insert([
-      { name, description, game, format, user_id: userData.user.id }
-    ]);
-
-    setLoading(false);
-    if (!error) {
-      setName('');
-      setDescription('');
-      setGame('Pokémon');
-      setFormat('Standard');
-      onSuccess();
+    try {
+      await createDeck.mutateAsync({ name: name.trim(), description, game, format });
+      setName("");
+      setDescription("");
+      setGame("Pokémon");
+      setFormat("Standard");
+      onSuccess?.();
       onClose();
-      router.refresh(); // optionally we handle refresh externally
-    } else {
-      logger.error("Failed to create deck", error);
+    } catch (error) {
+      toast.error(mapSupabaseError(error));
     }
   };
 
@@ -65,7 +50,7 @@ export default function CreateDeckModal({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -82,7 +67,9 @@ export default function CreateDeckModal({
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Game Selector */}
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-3">Select Game</label>
+                <label className="block text-sm font-semibold text-gray-300 mb-3">
+                  Select Game
+                </label>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   {GAMES.map((g) => {
                     const isSelected = game === g.name;
@@ -92,20 +79,36 @@ export default function CreateDeckModal({
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => setGame(g.name)}
-                        className={`cursor-pointer relative p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all duration-200 ${isSelected ? 'bg-[#1a1a1a] shadow-[0_0_15px_rgba(212,160,23,0.15)]' : 'bg-[#0a0a0a] border-gray-800 hover:border-gray-600'}`}
-                        style={{ borderColor: isSelected ? '#D4A017' : undefined }}
+                        className={`cursor-pointer relative p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all duration-200 ${
+                          isSelected
+                            ? "bg-[#1a1a1a] shadow-[0_0_15px_rgba(212,160,23,0.15)]"
+                            : "bg-[#0a0a0a] border-gray-800 hover:border-gray-600"
+                        }`}
+                        style={{ borderColor: isSelected ? "#D4A017" : undefined }}
                       >
-                        <div 
-                          className="absolute inset-0 z-0 opacity-10 rounded-xl pointer-events-none" 
-                          style={{ background: `linear-gradient(to bottom right, ${g.color}, transparent)` }} 
+                        <div
+                          className="absolute inset-0 z-0 opacity-10 rounded-xl pointer-events-none"
+                          style={{
+                            background: `linear-gradient(to bottom right, ${g.color}, transparent)`,
+                          }}
                         />
-                        <div 
+                        <div
                           className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shadow-lg z-10"
-                          style={{ backgroundColor: g.color + '40', color: g.color, border: `1px solid ${g.color}60` }}
+                          style={{
+                            backgroundColor: g.color + "40",
+                            color: g.color,
+                            border: `1px solid ${g.color}60`,
+                          }}
                         >
-                          {g.name === 'Magic: The Gathering' ? 'MTG' : g.name.substring(0,3).toUpperCase()}
+                          {g.name === "Magic: The Gathering"
+                            ? "MTG"
+                            : g.name.substring(0, 3).toUpperCase()}
                         </div>
-                        <span className={`text-sm font-medium z-10 text-center ${isSelected ? 'text-[#D4A017]' : 'text-gray-300'}`}>
+                        <span
+                          className={`text-sm font-medium z-10 text-center ${
+                            isSelected ? "text-[#D4A017]" : "text-gray-300"
+                          }`}
+                        >
                           {g.name}
                         </span>
                       </motion.div>
@@ -117,7 +120,9 @@ export default function CreateDeckModal({
               {/* Name & Format */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-2">Deck Name</label>
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    Deck Name
+                  </label>
                   <input
                     type="text"
                     value={name}
@@ -134,8 +139,10 @@ export default function CreateDeckModal({
                     onChange={(e) => setFormat(e.target.value)}
                     className="w-full bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] focus:ring-1 focus:ring-[#D4A017] transition-all appearance-none"
                   >
-                    {FORMATS.map(f => (
-                      <option key={f} value={f}>{f}</option>
+                    {FORMATS.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -143,7 +150,10 @@ export default function CreateDeckModal({
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">Description <span className="text-gray-600 font-normal">(Optional)</span></label>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  Description{" "}
+                  <span className="text-gray-600 font-normal">(Optional)</span>
+                </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -164,10 +174,10 @@ export default function CreateDeckModal({
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || !name.trim()}
-                  className="px-6 py-2.5 bg-[#D4A017] text-black font-bold rounded-xl hover:bg-[#F2C84B] hover:shadow-[0_0_20px_rgba(212,160,23,0.3)] transition-all disabled:opacity-50 disabled:hover:scale-100 active:scale-95"
+                  disabled={createDeck.isPending || !name.trim()}
+                  className="px-6 py-2.5 bg-[#D4A017] text-black font-bold rounded-xl hover:bg-[#F2C84B] hover:shadow-[0_0_20px_rgba(212,160,23,0.3)] transition-all disabled:opacity-50 active:scale-95"
                 >
-                  {loading ? 'Creating...' : 'Create Deck'}
+                  {createDeck.isPending ? "Creating..." : "Create Deck"}
                 </button>
               </div>
             </form>

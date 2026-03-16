@@ -1,53 +1,54 @@
-import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
-import DecksClient from '@/components/decks/DecksClient';
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import DecksClient from "@/components/decks/DecksClient";
+import type { DeckRow } from "@/lib/supabase/queries/decks";
 
 export default async function DecksPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect('/api/auth');
-  }
+  if (!user) redirect("/api/auth");
 
-  // Fetch decks and count their cards
-  const { data: decks, error } = await supabase
-    .from('decks')
-    .select(`
-      *,
-      deck_cards (
-        id,
-        quantity,
-        card_id
-      )
-    `)
-    .order('created_at', { ascending: false });
+  const { data: decks } = await supabase
+    .from("decks")
+    .select(`*, deck_cards(id, quantity, price)`)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
 
   let totalValue = 0;
-  let totalCardsCount = 0;
+  let totalCards = 0;
 
-  const formattedDecks = decks?.map((deck) => {
-    const cardsInDeck = deck.deck_cards || [];
-    let deckCardsCount = 0;
-    
-    // Sum quantites for each deck card
-    cardsInDeck.forEach((dc: any) => {
-        deckCardsCount += dc.quantity || 1;
-    });
+  const formattedDecks: DeckRow[] = (decks ?? []).map((deck) => {
+    const deckCards = (deck.deck_cards ?? []) as { id: string; quantity: number; price?: number }[];
+    const cardCount = deckCards.reduce((acc, dc) => acc + (dc.quantity ?? 1), 0);
+    const deckValue = deckCards.reduce(
+      (acc, dc) => acc + (dc.price ?? 0) * (dc.quantity ?? 1),
+      0
+    );
 
-    totalCardsCount += deckCardsCount;
-
-    // Simulate some deck value logic if missing, or use a db field. We don't have joined prices here easily without a complex query
-    // In a real app we'd join with the cards table and sum (price * quantity)
-    const deckValue = deck.total_value || (deckCardsCount * 2.5); // Fallback mock value
+    totalCards += cardCount;
     totalValue += deckValue;
 
     return {
-      ...deck,
-      card_count: deckCardsCount,
-      total_value: deckValue
-    }
-  }) || [];
+      id: deck.id,
+      user_id: deck.user_id,
+      name: deck.name,
+      game: deck.game,
+      cover_card_id: deck.cover_card_id ?? null,
+      description: deck.description,
+      format: deck.format,
+      created_at: deck.created_at,
+      updated_at: deck.updated_at,
+    };
+  });
 
-  return <DecksClient initialDecks={formattedDecks} totalValue={totalValue} totalCards={totalCardsCount} />;
+  return (
+    <DecksClient
+      initialDecks={formattedDecks}
+      totalValue={totalValue}
+      totalCards={totalCards}
+    />
+  );
 }
