@@ -154,7 +154,7 @@ export default function Navbar() {
                         <p className="text-sm text-white truncate">{user.email}</p>
                       </div>
                       <Link
-                        href="/dashboard"
+                        href="/profile"
                         onClick={() => setIsDropdownOpen(false)}
                         className="block px-4 py-2 text-sm text-gray-300 hover:text-gold-400 hover:bg-vault-800 transition-colors"
                       >
