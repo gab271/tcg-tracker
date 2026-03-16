@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&display=swap');
 @import "tailwindcss";
 
 @theme inline {
@@ -12,6 +13,7 @@
   /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: 'Cinzel', serif;
 }
 
 :root {
@@ -44,4 +46,28 @@ body {
 
 @utility vault-glow {
   box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+}
+
+@utility font-display {
+  font-family: var(--font-display);
+}
+
+/* Card holographic shimmer */
+@keyframes holoshimmer {
+  0% { transform: translateX(-150%) skewX(-15deg); opacity: 0; }
+  35% { opacity: 0.8; }
+  65% { opacity: 0.8; }
+  100% { transform: translateX(250%) skewX(-15deg); opacity: 0; }
+}
+
+/* Ticker scroll animation */
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Subtle card float */
+@keyframes cardFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
 }
