@@ -81,6 +81,24 @@ export interface Deck {
   totalValue?: number;
 }
 
+export interface MarketListing {
+  id: string;
+  sellerId: string;
+  collectionItemId: string | null;
+  cardId: string;
+  cardName: string;
+  cardImage: string | null;
+  game: string;
+  rarity: string | null;
+  condition: CardCondition;
+  price: number;
+  status: ListingStatus;
+  sellerUsername: string | null;
+  sellerAvatar: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DeckCard {
   id: string;
   deckId: string;

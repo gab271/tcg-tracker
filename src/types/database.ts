@@ -53,3 +53,21 @@ export interface PriceHistoryEntry {
   date: string;
   price: number;
 }
+
+export interface DbMarketListing {
+  id: string;
+  seller_id: string;
+  collection_item_id: string | null;
+  card_id: string;
+  card_name: string;
+  card_image: string | null;
+  game: string;
+  rarity: string | null;
+  condition: "mint" | "near_mint" | "played" | "damaged";
+  price: number;
+  status: "active" | "sold" | "cancelled";
+  seller_username: string | null;
+  seller_avatar: string | null;
+  created_at: string;
+  updated_at: string;
+}
