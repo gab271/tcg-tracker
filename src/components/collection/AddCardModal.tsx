@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Search, Loader2, Plus, Check } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface AddCardModalProps {
   isOpen: boolean;
@@ -60,7 +61,7 @@ export default function AddCardModal({ isOpen, onClose, onAddCard }: AddCardModa
           setResults([]);
         }
       } catch (err) {
-        console.error("Failed to search cards", err);
+        logger.error("Failed to search cards", err);
         setResults([]);
       } finally {
         setIsSearching(false);

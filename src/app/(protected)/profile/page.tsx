@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
+import { logger } from "@/lib/logger";
 import { 
   Camera, 
   Loader2, 
@@ -16,6 +17,19 @@ import {
   Trophy,
   Gamepad
 } from "lucide-react";
+
+interface CollectionItem {
+  quantity?: number;
+  created_at?: string;
+  cards?: {
+    market_price?: number;
+    game?: string;
+    name?: string;
+    image_url?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
 import Image from "next/image";
 import { toast } from "sonner";
 
@@ -72,14 +86,14 @@ export default function ProfilePage() {
           .order('created_at', { ascending: false });
 
         if (!collectionError && collection) {
-          const totalCards = collection.reduce((acc, curr) => acc + (curr.quantity || 1), 0);
+          const totalCards = collection.reduce((acc: number, curr: { quantity?: number }) => acc + (curr.quantity || 1), 0);
           
           let totalValue = 0;
           let mostValuable = null;
           let highestPrice = 0;
           const uniqueGames = new Set<string>();
 
-          collection.forEach(item => {
+          collection.forEach((item: CollectionItem) => {
             const price = item.cards?.market_price || 0;
             totalValue += price * (item.quantity || 1);
             
@@ -114,7 +128,7 @@ export default function ProfilePage() {
         }
 
       } catch (err: any) {
-        console.error("Error loading profile:", err);
+        logger.error("Error loading profile:", err);
         toast.error("Failed to load profile");
       } finally {
         setLoading(false);
@@ -210,7 +224,7 @@ export default function ProfilePage() {
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
   };
 
   if (loading) {

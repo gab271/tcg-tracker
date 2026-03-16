@@ -1,75 +1,76 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { serverEnv } from "@/lib/config";
+import { logger } from "@/lib/logger";
+import type { PriceHistoryEntry } from "@/types/database";
 
-// Server-only Supabase client (uses service role or anon key)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
+const supabase = createAdminClient();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
-// ─── Helper: extract best available price ───────────────────────────────────
-function pickPrice(prices: Record<string, any> | null | undefined, ...keys: string[]): number | null {
+interface PriceResult {
+  currentPrice: number | null;
+  currency: string;
+  source: string;
+  name: string;
+  image: string | null;
+}
+
+// --- Helper: extract best available price ---
+function pickPrice(prices: Record<string, unknown> | null | undefined, ...keys: string[]): number | null {
   if (!prices) return null;
   for (const key of keys) {
     const val = prices[key];
     if (val !== null && val !== undefined && val !== 0) {
-      return typeof val === "string" ? parseFloat(val) : val;
+      return typeof val === "string" ? parseFloat(val) : (val as number);
     }
   }
   return null;
 }
 
-// ─── Helper: fetch Pokémon price from PokemonTCG.io (Cardmarket EUR) ────────
-const pokemonApiHeaders: Record<string, string> = process.env.POKEMONTCG_API_KEY
-  ? { "X-Api-Key": process.env.POKEMONTCG_API_KEY }
+// --- Helper: fetch Pokemon price from PokemonTCG.io ---
+const pokemonApiHeaders: Record<string, string> = serverEnv.POKEMONTCG_API_KEY
+  ? { "X-Api-Key": serverEnv.POKEMONTCG_API_KEY }
   : {};
 
-async function fetchPokemonPrice(cardId: string) {
-  // Primary: PokemonTCG.io — has Cardmarket EUR + TCGPlayer USD prices
+async function fetchPokemonPrice(cardId: string): Promise<PriceResult | null> {
   try {
     const res = await fetch(`https://api.pokemontcg.io/v2/cards/${cardId}`, { headers: pokemonApiHeaders });
-    
     if (res.ok) {
       const data = await res.json();
-      const card = data.data;
-      return extractPokemonCardData(card, cardId);
+      return extractPokemonCardData(data.data, cardId);
     }
   } catch (err) {
-    console.error("[card-price] PokemonTCG.io direct fetch failed:", err);
+    logger.error("PokemonTCG.io direct fetch failed", err);
   }
 
-  // Fallback: try searching by name (using * wildcard match)
   try {
     const searchUrl = `https://api.pokemontcg.io/v2/cards?q=name:${encodeURIComponent(cardId)}&pageSize=1`;
-    console.log("[card-price] Searching PokemonTCG.io:", searchUrl);
+    logger.debug("Searching PokemonTCG.io:", searchUrl);
     const searchRes = await fetch(searchUrl, { headers: pokemonApiHeaders });
 
     if (searchRes.ok) {
       const searchData = await searchRes.json();
-      console.log("[card-price] Search results count:", searchData.data?.length ?? 0);
+      logger.debug("Search results count:", searchData.data?.length ?? 0);
       if (searchData.data && searchData.data.length > 0) {
         return extractPokemonCardData(searchData.data[0], cardId);
       }
     } else {
-      console.error("[card-price] Search failed with status:", searchRes.status);
+      logger.error("PokemonTCG.io search failed with status:", searchRes.status);
     }
   } catch (err) {
-    console.error("[card-price] PokemonTCG.io search failed:", err);
+    logger.error("PokemonTCG.io search failed", err);
   }
 
-  // Last resort: try TCGdex for name/image even if price is unavailable
+  // Last resort: TCGdex for name/image even if price is unavailable
   try {
     const fallback = await fetch(`https://api.tcgdex.net/v2/en/cards/${cardId}`);
     if (!fallback.ok) return null;
-    
     const card = await fallback.json();
     return {
       currentPrice: null,
       currency: "EUR",
       source: "tcgdex",
-      name: card?.name ?? cardId,
+      name: (card?.name as string) ?? cardId,
       image: card?.image ? `${card.image}/high.webp` : null,
     };
   } catch {
@@ -77,19 +78,24 @@ async function fetchPokemonPrice(cardId: string) {
   }
 }
 
-function extractPokemonCardData(card: any, cardId: string) {
+interface PokemonCard {
+  name?: string;
+  images?: { small?: string };
+  cardmarket?: { prices?: Record<string, unknown> };
+  tcgplayer?: { prices?: Record<string, Record<string, unknown>> };
+}
+
+function extractPokemonCardData(card: PokemonCard, cardId: string): PriceResult {
   const cm = card?.cardmarket?.prices;
   const tcg = card?.tcgplayer?.prices;
 
-  // Try Cardmarket EUR first, then TCGPlayer USD
   let price = pickPrice(cm, "averageSellPrice", "trendPrice", "avg1", "avg7", "avg30");
   let currency = "EUR";
   let source = "pokemontcg.io/cardmarket";
 
   if (price === null && tcg) {
-    // TCGPlayer has sub-objects per variant (normal, holofoil, etc.)
     const variant = tcg.holofoil ?? tcg.normal ?? tcg.reverseHolofoil ?? tcg["1stEditionHolofoil"] ?? Object.values(tcg)[0];
-    price = pickPrice(variant as any, "market", "mid", "low");
+    price = pickPrice(variant as Record<string, unknown>, "market", "mid", "low");
     currency = "USD";
     source = "pokemontcg.io/tcgplayer";
   }
@@ -103,16 +109,21 @@ function extractPokemonCardData(card: any, cardId: string) {
   };
 }
 
-// ─── Helper: fetch Magic price from Scryfall ────────────────────────────────
-async function fetchMagicPrice(cardId: string) {
-  // Scryfall accepts set/collector-number or a UUID
-  let card: any = null;
+// --- Helper: fetch Magic price from Scryfall ---
+interface ScryfallCard {
+  name?: string;
+  prices?: Record<string, unknown>;
+  image_uris?: { small?: string };
+  card_faces?: Array<{ image_uris?: { small?: string } }>;
+}
+
+async function fetchMagicPrice(cardId: string): Promise<PriceResult | null> {
+  let card: ScryfallCard | null = null;
 
   const res = await fetch(`https://api.scryfall.com/cards/${cardId}`);
   if (res.ok) {
     card = await res.json();
   } else {
-    // Try searching by name as fallback
     const search = await fetch(
       `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardId)}`
     );
@@ -120,7 +131,6 @@ async function fetchMagicPrice(cardId: string) {
     card = await search.json();
   }
 
-  // Try EUR prices first, then USD
   const prices = card?.prices;
   let price = pickPrice(prices, "eur", "eur_foil");
   let currency = "EUR";
@@ -139,17 +149,15 @@ async function fetchMagicPrice(cardId: string) {
   };
 }
 
-// ─── Helper: generate synthetic 7-day price history ─────────────────────────
-// In production this would come from stored daily snapshots in Supabase.
-function generatePriceHistory(currentPrice: number | null): { date: string; price: number }[] {
+// --- Helper: generate synthetic 7-day price history ---
+function generatePriceHistory(currentPrice: number | null): PriceHistoryEntry[] {
   if (!currentPrice) return [];
-  const history: { date: string; price: number }[] = [];
+  const history: PriceHistoryEntry[] = [];
   const now = new Date();
 
   for (let i = 6; i >= 0; i--) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
-    // Simulate ±5% daily variance for demo
     const variance = 1 + (Math.random() * 0.1 - 0.05);
     history.push({
       date: date.toISOString().split("T")[0],
@@ -157,12 +165,13 @@ function generatePriceHistory(currentPrice: number | null): { date: string; pric
     });
   }
 
-  // Ensure the last entry matches the actual current price
   history[history.length - 1].price = currentPrice;
   return history;
 }
 
-// ─── GET /api/card-price?cardId=xxx&game=pokemon|magic ──────────────────────
+// --- GET /api/card-price?cardId=xxx&game=pokemon|magic ---
+const VALID_GAMES = ["pokemon", "magic"] as const;
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const cardId = searchParams.get("cardId");
@@ -175,14 +184,14 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!["pokemon", "magic"].includes(game)) {
+  if (!VALID_GAMES.includes(game as typeof VALID_GAMES[number])) {
     return NextResponse.json(
       { error: 'Unsupported game. Use "pokemon" or "magic".' },
       { status: 400 }
     );
   }
 
-  // ── 1. Check Supabase cache ───────────────────────────────────────────────
+  // 1. Check Supabase cache
   try {
     const { data: cached } = await supabase
       .from("price_cache")
@@ -209,11 +218,11 @@ export async function GET(request: NextRequest) {
       }
     }
   } catch {
-    // Cache table might not exist yet — continue to live fetch
+    // Cache table might not exist yet -- continue to live fetch
   }
 
-  // ── 2. Fetch live price from external API ─────────────────────────────────
-  let result;
+  // 2. Fetch live price from external API
+  let result: PriceResult | null;
   if (game === "pokemon") {
     result = await fetchPokemonPrice(cardId);
   } else {
@@ -229,7 +238,7 @@ export async function GET(request: NextRequest) {
 
   const priceHistory = generatePriceHistory(result.currentPrice);
 
-  // ── 3. Upsert into Supabase cache ────────────────────────────────────────
+  // 3. Upsert into Supabase cache
   try {
     await supabase.from("price_cache").upsert(
       {
@@ -248,11 +257,11 @@ export async function GET(request: NextRequest) {
     // Cache write failure is non-critical
   }
 
-  // ── 4. Return response ───────────────────────────────────────────────────
+  // 4. Return response
   return NextResponse.json({
     currentPrice: result.currentPrice,
     priceHistory,
-    currency: "EUR",
+    currency: result.currency,
     source: result.source,
     name: result.name,
     image: result.image,

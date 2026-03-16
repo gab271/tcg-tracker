@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '@/lib/logger';
 
 const GAMES = [
   { name: 'Pokémon', color: '#EF4444' },
@@ -56,7 +57,7 @@ export default function CreateDeckModal({
       onClose();
       router.refresh(); // optionally we handle refresh externally
     } else {
-      console.error(error);
+      logger.error("Failed to create deck", error);
     }
   };
 

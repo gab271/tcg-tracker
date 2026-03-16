@@ -43,7 +43,7 @@ export default function Navbar() {
     
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: { user?: unknown } | null) => {
       setUser(session?.user ?? null);
       setIsLoadingAuth(false);
     });
