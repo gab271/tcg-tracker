@@ -60,6 +60,42 @@ body {
   100% { transform: translateX(250%) skewX(-15deg); opacity: 0; }
 }
 
+/* Rainbow holographic foil for secret rares */
+@keyframes holorainbow {
+  0%   { background-position: 0% 50%;   filter: hue-rotate(0deg)   saturate(1.4); }
+  25%  { background-position: 50% 0%;   filter: hue-rotate(90deg)  saturate(1.6); }
+  50%  { background-position: 100% 50%; filter: hue-rotate(180deg) saturate(1.4); }
+  75%  { background-position: 50% 100%; filter: hue-rotate(270deg) saturate(1.6); }
+  100% { background-position: 0% 50%;   filter: hue-rotate(360deg) saturate(1.4); }
+}
+
+/* Energy symbol float */
+@keyframes energyFloat {
+  0%, 100% { transform: translateY(0px)   rotate(0deg);   opacity: 0.25; }
+  33%       { transform: translateY(-14px) rotate(8deg);   opacity: 0.55; }
+  66%       { transform: translateY(-7px)  rotate(-5deg);  opacity: 0.40; }
+}
+
+/* Rarity glow pulse */
+@keyframes rarityPulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(212,175,55,0.35); }
+  50%       { box-shadow: 0 0 30px rgba(212,175,55,0.75), 0 0 60px rgba(212,175,55,0.25); }
+}
+
+/* Secondary foil sheen */
+@keyframes foilSheen {
+  0%   { transform: translateX(-200%) skewX(-20deg); opacity: 0; }
+  15%  { opacity: 0.6; }
+  85%  { opacity: 0.6; }
+  100% { transform: translateX(300%) skewX(-20deg);  opacity: 0; }
+}
+
+/* Card scan line overlay */
+@keyframes scanlines {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+
 /* Ticker scroll animation */
 @keyframes ticker {
   0% { transform: translateX(0); }
@@ -70,4 +106,20 @@ body {
 @keyframes cardFloat {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-8px); }
+}
+
+/* Rarity card shine on hover */
+@utility holo-foil {
+  background: linear-gradient(
+    125deg,
+    hsla(0deg,   100%, 65%, 0.12) 0%,
+    hsla(60deg,  100%, 65%, 0.12) 17%,
+    hsla(120deg, 100%, 65%, 0.12) 34%,
+    hsla(180deg, 100%, 65%, 0.12) 51%,
+    hsla(240deg, 100%, 65%, 0.12) 68%,
+    hsla(300deg, 100%, 65%, 0.12) 85%,
+    hsla(360deg, 100%, 65%, 0.12) 100%
+  );
+  background-size: 300% 300%;
+  animation: holorainbow 4s ease infinite;
 }

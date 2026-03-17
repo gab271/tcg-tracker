@@ -35,40 +35,76 @@ const games = [
     count: "450K+",
     color: "#ef4444",
     bg: "from-red-950 to-red-900/20",
-    border: "border-red-700/40",
-    glow: "rgba(239,68,68,0.2)",
+    border: "border-red-700/50",
+    glow: "rgba(239,68,68,0.22)",
     symbol: "⚡",
     desc: "Base Set through Scarlet & Violet",
+    energyColor: "#ef4444",
+    energyPips: ["#ef4444", "#f59e0b", "#3b82f6", "#10b981", "#8b5cf6"],
+    statLabel: "HP",
+    statVal: "450",
+    cardType: "Stage 2",
+    cardFrame: "border-[3px] border-yellow-500/60",
+    innerBg: "from-red-950/90 via-red-900/40 to-black",
+    mechanic: "Energy Attach",
+    icon: "🔥",
   },
   {
     name: "Magic: The Gathering",
     count: "890K+",
     color: "#3b82f6",
     bg: "from-blue-950 to-blue-900/20",
-    border: "border-blue-700/40",
-    glow: "rgba(59,130,246,0.2)",
+    border: "border-blue-700/50",
+    glow: "rgba(59,130,246,0.22)",
     symbol: "✦",
     desc: "Alpha through The Lost Caverns",
+    energyColor: "#3b82f6",
+    energyPips: ["#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#f59e0b"],
+    statLabel: "CMC",
+    statVal: "0–16",
+    cardType: "Sorcery · Instant · Artifact",
+    cardFrame: "border-[2.5px] border-gray-800",
+    innerBg: "from-[#0a0f1a] via-blue-950/30 to-black",
+    mechanic: "Stack Resolution",
+    icon: "✦",
   },
   {
     name: "One Piece TCG",
     count: "120K+",
     color: "#eab308",
     bg: "from-yellow-950 to-yellow-900/20",
-    border: "border-yellow-700/40",
-    glow: "rgba(234,179,8,0.2)",
+    border: "border-yellow-700/50",
+    glow: "rgba(234,179,8,0.22)",
     symbol: "☠",
     desc: "Romance Dawn through Wings of Captain",
+    energyColor: "#eab308",
+    energyPips: ["#ef4444", "#eab308", "#3b82f6", "#10b981", "#8b5cf6"],
+    statLabel: "PWR",
+    statVal: "5K+",
+    cardType: "Leader · Character",
+    cardFrame: "border-[2.5px] border-yellow-500/55",
+    innerBg: "from-red-950/90 via-yellow-950/30 to-black",
+    mechanic: "Rush · Blocker",
+    icon: "☠",
   },
   {
     name: "Yu-Gi-Oh!",
     count: "340K+",
     color: "#a855f7",
     bg: "from-purple-950 to-purple-900/20",
-    border: "border-purple-700/40",
-    glow: "rgba(168,85,247,0.2)",
+    border: "border-yellow-600/50",
+    glow: "rgba(168,85,247,0.22)",
     symbol: "★",
     desc: "LOB through Rage of the Abyss",
+    energyColor: "#a855f7",
+    energyPips: ["#fbbf24", "#f59e0b", "#d97706"],
+    statLabel: "ATK",
+    statVal: "4000",
+    cardType: "Monster · Spell · Trap",
+    cardFrame: "border-[2.5px] border-yellow-600/55",
+    innerBg: "from-amber-950/90 via-purple-950/20 to-black",
+    mechanic: "Summon · Activate",
+    icon: "🧙",
   },
 ];
 
@@ -172,22 +208,154 @@ export default function HomeContent() {
         <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-vault-800/80 to-transparent pointer-events-none" />
       </div>
 
-      {/* ── STATS BAR ── */}
-      <section ref={statsRef} className="w-full border-b border-gold-500/10 py-20 bg-vault-900">
+      {/* ── RARITY TIERS SHOWCASE ── */}
+      <section className="py-16 bg-vault-900 border-b border-gold-500/8">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800/60">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-10"
+          >
+            <p className="text-gold-500/60 text-[10px] uppercase tracking-[0.25em] font-semibold mb-2">Collection Hierarchy</p>
+            <h2 className="font-display text-2xl md:text-3xl font-bold text-white">Every Rarity. Every Game.</h2>
+            <p className="text-gray-600 text-sm mt-2">From bulk commons to PSA-graded secret rares — we track them all</p>
+          </motion.div>
+
+          <div className="flex flex-wrap justify-center items-end gap-4 lg:gap-6">
             {[
-              { value: "12400", suffix: "+", label: "Collectors worldwide", prefix: "" },
-              { value: "2.3", suffix: "M", label: "Total value tracked", prefix: "€" },
-              { value: "847", suffix: "K+", label: "Cards registered", prefix: "" },
+              {
+                symbol: "◆", name: "Common", abbr: "C",
+                border: "border-gray-700/60", bg: "from-gray-900 to-gray-950",
+                textCol: "text-gray-400", glowCol: "rgba(156,163,175,0.12)",
+                holo: false, height: "h-28", icon: "🃏", price: "$0.10",
+              },
+              {
+                symbol: "◆◆", name: "Uncommon", abbr: "U",
+                border: "border-emerald-700/50", bg: "from-emerald-950 to-gray-950",
+                textCol: "text-emerald-400", glowCol: "rgba(52,211,153,0.15)",
+                holo: false, height: "h-32", icon: "🌿", price: "$1–5",
+              },
+              {
+                symbol: "★", name: "Rare", abbr: "R",
+                border: "border-blue-600/50", bg: "from-blue-950 to-gray-950",
+                textCol: "text-blue-400", glowCol: "rgba(96,165,250,0.2)",
+                holo: false, height: "h-36", icon: "💎", price: "$5–50",
+              },
+              {
+                symbol: "★★", name: "Ultra Rare", abbr: "UR",
+                border: "border-yellow-500/60", bg: "from-yellow-950 to-amber-950",
+                textCol: "text-yellow-400", glowCol: "rgba(251,191,36,0.25)",
+                holo: true, holoColors: "hsla(40,100%,65%,0.14)", height: "h-40", icon: "✨", price: "$50–500",
+              },
+              {
+                symbol: "★★★", name: "Secret Rare", abbr: "SR",
+                border: "border-gold-500/70", bg: "from-amber-900 to-orange-950",
+                textCol: "text-gold-400", glowCol: "rgba(212,175,55,0.4)",
+                holo: true, holoColors: "125deg,hsla(0,100%,65%,0.13) 0%,hsla(60,100%,65%,0.13) 20%,hsla(120,100%,65%,0.13) 40%,hsla(180,100%,65%,0.13) 60%,hsla(240,100%,65%,0.13) 80%,hsla(300,100%,65%,0.13) 100%",
+                rainbow: true, height: "h-48", icon: "🏆", price: "$500+",
+              },
+            ].map((tier, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+                whileHover={{ y: -10, scale: 1.06, transition: { duration: 0.25 } }}
+                className={`relative w-[88px] lg:w-[100px] ${tier.height} rounded-xl border-2 ${tier.border} overflow-hidden cursor-pointer flex-shrink-0`}
+                style={{ boxShadow: `0 8px 32px ${tier.glowCol}, 0 0 0 1px rgba(255,255,255,0.03)` }}
+              >
+                {/* Holographic overlay */}
+                {tier.holo && (
+                  <div
+                    className="absolute inset-0 z-10 pointer-events-none mix-blend-overlay"
+                    style={tier.rainbow ? {
+                      background: `linear-gradient(${tier.holoColors})`,
+                      backgroundSize: "300% 300%",
+                      animation: "holorainbow 4s ease infinite",
+                    } : {
+                      background: `linear-gradient(135deg, transparent 30%, ${tier.holoColors} 50%, transparent 70%)`,
+                      animation: "holoshimmer 3.5s ease-in-out 0.5s infinite",
+                      backgroundSize: "200% 100%",
+                    }}
+                  />
+                )}
+
+                {/* Background */}
+                <div className={`absolute inset-0 bg-gradient-to-b ${tier.bg}`} />
+
+                {/* Content */}
+                <div className="relative z-20 h-full flex flex-col items-center justify-between p-2 pt-2.5">
+                  <div className={`text-[10px] font-bold font-mono ${tier.textCol}`}>{tier.abbr}</div>
+                  <div className="text-3xl">{tier.icon}</div>
+                  <div className="text-center">
+                    <div className={`text-[9px] font-bold ${tier.textCol} tracking-wide`}>{tier.symbol}</div>
+                    <div className="text-[7.5px] text-gray-500 mt-0.5">{tier.name}</div>
+                    <div className={`text-[7px] font-mono font-bold ${tier.textCol} mt-1 opacity-70`}>{tier.price}</div>
+                  </div>
+                </div>
+
+                {/* Secret rare outer glow */}
+                {tier.rainbow && (
+                  <div
+                    className="absolute -inset-1 rounded-xl blur-md -z-10"
+                    style={{ background: "radial-gradient(ellipse, rgba(212,175,55,0.3) 0%, transparent 70%)", animation: "rarityPulse 2s ease-in-out infinite" }}
+                  />
+                )}
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Connector arrows between cards */}
+          <div className="hidden lg:flex items-center justify-center gap-0 mt-4 pointer-events-none select-none">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center" style={{ width: "calc((100% - 5 * 100px) / 4 + 100px)", justifyContent: "flex-end" }}>
+                <span className="text-gray-700 text-lg mr-1">→</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── STATS BAR ── */}
+      <section ref={statsRef} className="w-full border-b border-gold-500/10 py-16 bg-vault-900">
+        <div className="max-w-5xl mx-auto px-6">
+          {/* TCG stat block style header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-3 px-4 py-1.5 border border-gold-500/20 rounded-full bg-gold-500/5">
+              <span className="text-[8px] font-bold text-gold-400/60 uppercase tracking-[0.2em]">Vault Stats</span>
+              <span className="w-px h-3 bg-gold-500/20" />
+              <div className="flex gap-1">
+                {["⚡","✦","★","☠"].map((s, j) => (
+                  <span key={j} className="text-[10px] opacity-40">{s}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { value: "12400", suffix: "+", label: "Collectors worldwide", prefix: "", symbol: "⚡", symbolCol: "text-yellow-400", border: "border-yellow-700/25", bg: "bg-yellow-500/3" },
+              { value: "2.3", suffix: "M", label: "Total value tracked", prefix: "€", symbol: "◆", symbolCol: "text-gold-400", border: "border-gold-500/30", bg: "bg-gold-500/4" },
+              { value: "847", suffix: "K+", label: "Cards registered", prefix: "", symbol: "★", symbolCol: "text-blue-400", border: "border-blue-700/25", bg: "bg-blue-500/3" },
             ].map((stat, i) => (
-              <div key={i} className="py-8 px-8 text-center group">
-                <div className="font-display text-4xl md:text-5xl font-bold text-gold-500 mb-2 font-mono">
+              <div
+                key={i}
+                className={`relative py-8 px-6 text-center rounded-xl border ${stat.border} ${stat.bg} overflow-hidden group hover:scale-[1.02] transition-transform duration-300`}
+              >
+                {/* Background stat symbol */}
+                <div className={`absolute top-3 right-4 text-5xl font-bold ${stat.symbolCol} opacity-[0.06] select-none pointer-events-none`}>
+                  {stat.symbol}
+                </div>
+                <div className={`text-xs font-bold ${stat.symbolCol} opacity-50 uppercase tracking-[0.2em] mb-3 font-mono`}>
+                  {stat.symbol} {stat.label}
+                </div>
+                <div className="font-display text-4xl md:text-5xl font-bold text-gold-500 font-mono leading-none">
                   {stat.prefix}
                   <span ref={el => { countersRef.current[i] = el; }} data-target={stat.value}>0</span>
                   {stat.suffix}
                 </div>
-                <p className="text-gray-500 text-sm tracking-wide">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -220,19 +388,44 @@ export default function HomeContent() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.6, delay: i * 0.15 }}
-                whileHover={{ y: -4, transition: { duration: 0.25 } }}
-                className={`relative p-8 rounded-2xl ${step.bg} border ${step.border} group`}
+                whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.25 } }}
+                className={`relative rounded-xl border-2 ${step.border} overflow-hidden group cursor-pointer`}
+                style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)" }}
               >
-                <div className="flex items-start justify-between mb-6">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${step.bg} border ${step.border}`}>
+                {/* Card frame header */}
+                <div className={`px-5 pt-5 pb-3 border-b ${step.border} flex justify-between items-center ${step.bg}`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${step.bg} border ${step.border}`}>
                     <step.icon className={`w-5 h-5 ${step.color}`} />
                   </div>
-                  <span className={`font-display font-bold text-4xl ${step.color} opacity-20 group-hover:opacity-35 transition-opacity`}>
+                  <span className={`font-display font-bold text-3xl ${step.color} opacity-20 group-hover:opacity-40 transition-opacity font-mono`}>
                     {step.number}
                   </span>
                 </div>
-                <h3 className="font-display text-xl font-bold text-white mb-3">{step.title}</h3>
-                <p className="text-gray-400 leading-relaxed text-sm">{step.desc}</p>
+
+                {/* Art zone */}
+                <div className={`mx-4 my-3 h-[72px] rounded-lg ${step.bg} border ${step.border} flex items-center justify-center relative overflow-hidden`}>
+                  <step.icon className={`w-10 h-10 ${step.color} opacity-15`} />
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/40" />
+                </div>
+
+                {/* Type line */}
+                <div className="mx-4 mb-3">
+                  <div className={`border ${step.border} rounded-sm px-2 py-0.5`}>
+                    <span className={`text-[7.5px] italic ${step.color} opacity-60`}>Trainer Card · Tool</span>
+                  </div>
+                </div>
+
+                {/* Rules text / body */}
+                <div className="mx-4 mb-4 px-3 py-3 bg-black/20 border border-white/5 rounded-lg min-h-[72px]">
+                  <h3 className="font-display text-base font-bold text-white mb-2">{step.title}</h3>
+                  <p className="text-gray-500 leading-relaxed text-xs">{step.desc}</p>
+                </div>
+
+                {/* Card number footer */}
+                <div className="mx-4 mb-4 flex justify-between items-center">
+                  <span className={`text-[7px] font-mono ${step.color} opacity-30`}>TCG-TRK-0{i + 1}/03</span>
+                  <span className={`text-[8px] font-bold ${step.color} opacity-50`}>★</span>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -426,32 +619,79 @@ export default function HomeContent() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.5, delay: i * 0.08 }}
-                whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                style={{
-                  "--glow": game.glow,
-                } as React.CSSProperties}
-                className={`relative group rounded-2xl bg-gradient-to-b ${game.bg} border ${game.border} p-6 cursor-pointer overflow-hidden transition-all duration-300`}
+                whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.2 } }}
+                className={`relative group rounded-xl ${game.cardFrame} overflow-hidden cursor-pointer`}
+                style={{ boxShadow: `0 8px 36px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.03)` }}
               >
                 {/* Hover glow */}
                 <div
-                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                  style={{ boxShadow: `inset 0 0 30px ${game.glow}` }}
+                  className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-400 pointer-events-none z-10"
+                  style={{ boxShadow: `inset 0 0 40px ${game.glow}` }}
                 />
-                {/* Symbol */}
+
+                {/* Card frame bg */}
+                <div className={`absolute inset-0 bg-gradient-to-b ${game.innerBg}`} />
+
+                {/* Card header bar */}
                 <div
-                  className="font-display text-5xl font-bold mb-4 opacity-20 group-hover:opacity-35 transition-opacity"
-                  style={{ color: game.color }}
+                  className="relative z-20 px-3 pt-3 pb-2 border-b flex justify-between items-center"
+                  style={{ borderColor: `${game.energyColor}22` }}
                 >
-                  {game.symbol}
+                  <span className="font-display font-bold text-white text-[11px] tracking-wide truncate pr-1">{game.name}</span>
+                  <span className="text-base shrink-0" style={{ filter: `drop-shadow(0 0 6px ${game.energyColor}88)` }}>{game.icon}</span>
                 </div>
-                <h3 className="font-display font-bold text-lg text-white mb-1">{game.name}</h3>
-                <p className="text-[11px] text-gray-500 mb-4 leading-snug">{game.desc}</p>
-                <span
-                  className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
-                  style={{ color: game.color, background: `${game.glow}` }}
+
+                {/* Art zone */}
+                <div
+                  className="relative z-20 mx-2.5 my-2 h-[76px] rounded-lg overflow-hidden flex items-center justify-center border"
+                  style={{ borderColor: `${game.energyColor}25`, background: `radial-gradient(ellipse at center, ${game.energyColor}18 0%, transparent 70%)` }}
                 >
-                  {game.count} cards
-                </span>
+                  <span className="text-5xl opacity-25 select-none">{game.icon}</span>
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50" />
+                  {/* Stat badge */}
+                  <div
+                    className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold border"
+                    style={{ color: game.energyColor, background: `${game.energyColor}18`, borderColor: `${game.energyColor}35` }}
+                  >
+                    {game.statLabel} {game.statVal}
+                  </div>
+                </div>
+
+                {/* Type line */}
+                <div
+                  className="relative z-20 mx-2.5 mb-2 px-1.5 py-0.5 rounded-sm border text-[7.5px] italic text-gray-500"
+                  style={{ borderColor: `${game.energyColor}20` }}
+                >
+                  {game.cardType}
+                </div>
+
+                {/* Energy pips row */}
+                <div className="relative z-20 px-3 pb-2.5 flex items-center justify-between">
+                  <div className="flex gap-1">
+                    {game.energyPips.map((pip, j) => (
+                      <span
+                        key={j}
+                        className="w-2.5 h-2.5 rounded-full inline-block border border-white/10"
+                        style={{ background: pip, boxShadow: `0 0 6px ${pip}55` }}
+                      />
+                    ))}
+                  </div>
+                  <span
+                    className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ color: game.energyColor, background: `${game.energyColor}18` }}
+                  >
+                    {game.count}
+                  </span>
+                </div>
+
+                {/* Card number / mechanic footer */}
+                <div
+                  className="relative z-20 px-3 pb-2.5 flex justify-between items-center border-t"
+                  style={{ borderColor: `${game.energyColor}15` }}
+                >
+                  <span className="text-[7px] text-gray-700 font-mono">{game.mechanic}</span>
+                  <span className="text-[7px] text-gray-700 font-mono">{game.desc.split(" ").slice(-2).join(" ")}</span>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -605,7 +845,39 @@ export default function HomeContent() {
       {/* ── FINAL CTA ── */}
       <section className="py-28 relative overflow-hidden">
         <div className="absolute inset-0 bg-vault-900" />
+        {/* Card-back diamond grid background */}
+        <div
+          className="absolute inset-0 opacity-[0.025] pointer-events-none"
+          style={{
+            backgroundImage: `
+              repeating-linear-gradient(-45deg, #d4af37 0, #d4af37 1px, transparent 0, transparent 30px),
+              repeating-linear-gradient( 45deg, #d4af37 0, #d4af37 1px, transparent 0, transparent 30px)
+            `,
+          }}
+        />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gold-500/10 rounded-full blur-[140px] pointer-events-none" />
+
+        {/* Floating card silhouettes */}
+        {[
+          { rot: -12, left: "3%",  top: "20%", opacity: 0.04, w: "60px", h: "84px" },
+          { rot: 8,   right: "4%", top: "30%", opacity: 0.04, w: "55px", h: "77px" },
+          { rot: -5,  left: "8%",  bottom: "20%", opacity: 0.03, w: "48px", h: "67px" },
+          { rot: 15,  right: "9%", bottom: "25%", opacity: 0.03, w: "52px", h: "73px" },
+        ].map((card, i) => (
+          <div
+            key={i}
+            className="absolute rounded-[8px] border border-gold-500 pointer-events-none"
+            style={{
+              ...(card.left ? { left: card.left } : {}),
+              ...(card.right ? { right: (card as { right: string }).right } : {}),
+              ...(card.top ? { top: card.top } : {}),
+              ...(card.bottom ? { bottom: (card as { bottom: string }).bottom } : {}),
+              width: card.w, height: card.h,
+              opacity: card.opacity,
+              transform: `rotate(${card.rot}deg)`,
+            }}
+          />
+        ))}
 
         <div className="max-w-3xl mx-auto px-6 relative z-10 text-center">
           <motion.div
@@ -614,15 +886,40 @@ export default function HomeContent() {
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
-            <p className="text-gold-500/70 text-[10px] uppercase tracking-[0.25em] font-semibold mb-5">Ready to begin?</p>
+            {/* Rarity badge */}
+            <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 border border-gold-500/30 rounded-full bg-gold-500/8"
+              style={{ animation: "rarityPulse 3s ease-in-out infinite" }}>
+              <span className="text-gold-400 text-sm">★★★</span>
+              <span className="text-gold-400 text-[10px] font-semibold tracking-[0.2em] uppercase">Secret Rare Access</span>
+            </div>
+
             <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-5 text-white leading-tight">
               Your Collection<br />
               <span className="text-gold-gradient">Deserves a Vault</span>
             </h2>
             <p className="text-lg text-gray-400 mb-10 max-w-xl mx-auto leading-relaxed">
               Join 12,400+ collectors tracking their cards, watching the market, and
-              building the collection they've always dreamed of.
+              building the collection they&apos;ve always dreamed of.
             </p>
+
+            {/* Game energy pips */}
+            <div className="flex items-center justify-center gap-3 mb-8">
+              {[
+                { label: "PKM", color: "#ef4444", sym: "⚡" },
+                { label: "MTG", color: "#3b82f6", sym: "✦" },
+                { label: "YGO", color: "#a855f7", sym: "★" },
+                { label: "OP",  color: "#eab308", sym: "☠" },
+              ].map((g, j) => (
+                <div key={j} className="flex items-center gap-1.5 text-[9px] font-bold font-mono" style={{ color: g.color }}>
+                  <span className="w-3 h-3 rounded-full border flex items-center justify-center text-[7px]"
+                    style={{ borderColor: g.color, background: `${g.color}18` }}>
+                    {g.sym}
+                  </span>
+                  {g.label}
+                </div>
+              ))}
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button className="px-10 py-4 rounded-sm bg-gold-500 hover:bg-gold-400 text-vault-900 font-bold text-sm uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_24px_rgba(212,175,55,0.3)] hover:shadow-[0_0_40px_rgba(212,175,55,0.5)] font-display">
                 Open Your Vault — Free
