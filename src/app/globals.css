@@ -2,14 +2,19 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Colors */
-  --color-vault-900: #0f1115;
-  --color-vault-800: #16191f;
-  --color-vault-700: #1c2028;
-  --color-gold-500: #d4af37;
-  --color-gold-400: #e5c048;
-  --color-gold-300: #f6d159;
-  
+  /* Colors — Cosmic Fire palette */
+  --color-vault-900: #080b14;
+  --color-vault-800: #0d1120;
+  --color-vault-700: #131928;
+  /* Fire orange (primary accent) */
+  --color-gold-500: #f97316;
+  --color-gold-400: #fb923c;
+  --color-gold-300: #fdba74;
+  /* Electric blue (secondary accent) */
+  --color-electric-500: #3b82f6;
+  --color-electric-400: #60a5fa;
+  --color-electric-300: #93c5fd;
+
   /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -18,7 +23,7 @@
 
 :root {
   --background: var(--color-vault-900);
-  --foreground: #f3f4f6;
+  --foreground: #e8eaf0;
 }
 
 body {
@@ -30,22 +35,22 @@ body {
 
 /* Custom utilities */
 @utility text-gold-gradient {
-  background: linear-gradient(135deg, var(--color-gold-300), var(--color-gold-500));
+  background: linear-gradient(135deg, var(--color-gold-300), var(--color-gold-500), var(--color-electric-400));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 @utility bg-gold-gradient {
-  background: linear-gradient(135deg, var(--color-gold-300), var(--color-gold-500));
+  background: linear-gradient(135deg, var(--color-gold-400), var(--color-gold-500), var(--color-electric-500));
 }
 
 @utility vault-border {
-  border: 1px solid rgba(212, 175, 55, 0.2);
+  border: 1px solid rgba(249, 115, 22, 0.2);
 }
 
 @utility vault-glow {
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+  box-shadow: 0 0 15px rgba(249, 115, 22, 0.15);
 }
 
 @utility font-display {
@@ -78,8 +83,8 @@ body {
 
 /* Rarity glow pulse */
 @keyframes rarityPulse {
-  0%, 100% { box-shadow: 0 0 12px rgba(212,175,55,0.35); }
-  50%       { box-shadow: 0 0 30px rgba(212,175,55,0.75), 0 0 60px rgba(212,175,55,0.25); }
+  0%, 100% { box-shadow: 0 0 12px rgba(249,115,22,0.35); }
+  50%       { box-shadow: 0 0 30px rgba(249,115,22,0.75), 0 0 60px rgba(59,130,246,0.25); }
 }
 
 /* Secondary foil sheen */

@@ -68,8 +68,8 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Top accent line */}
-      <div className="fixed top-0 left-0 right-0 h-[2px] z-[60] bg-gradient-to-r from-transparent via-gold-500/60 to-transparent" />
+      {/* Top accent line — fire → electric */}
+      <div className="fixed top-0 left-0 right-0 h-[2px] z-[60]" style={{ background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.8) 30%, rgba(59,130,246,0.8) 70%, transparent)' }} />
 
       <header
         className={`fixed top-[2px] left-0 right-0 z-50 transition-all duration-500 ${
@@ -83,8 +83,13 @@ export default function Navbar() {
           {/* ── Logo ── */}
           <Link href="/" className="group flex items-center gap-3 z-50 shrink-0">
             {/* Logo image */}
-            <div className="relative w-9 h-9 rounded-lg overflow-hidden shadow-[0_0_12px_rgba(212,175,55,0.15)] group-hover:shadow-[0_0_20px_rgba(212,175,55,0.35)] transition-shadow duration-300 shrink-0">
-              <img src="/logoTcg.png" alt="TCG Multiverse" className="w-full h-full object-cover" />
+            <div className="relative w-11 h-11 shrink-0 transition-transform duration-300 group-hover:scale-105">
+              <img
+                src="/logoTcg.png"
+                alt="TCG Multiverse"
+                className="w-full h-full object-contain"
+                style={{ filter: 'drop-shadow(0 0 8px rgba(249,115,22,0.35))' }}
+              />
             </div>
             {/* Wordmark */}
             <div className="hidden sm:flex flex-col leading-none">
@@ -233,7 +238,7 @@ export default function Navbar() {
                 </button>
                 <button
                   onClick={() => { setAuthMode("register"); setIsAuthOpen(true); }}
-                  className="relative group px-5 py-2 rounded-md bg-vault-800 border border-gold-500/30 hover:border-gold-500/60 text-gold-400 text-sm font-medium tracking-wide transition-all duration-200 shadow-[0_0_12px_rgba(212,175,55,0.1)] hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] overflow-hidden"
+                  className="relative group px-5 py-2 rounded-md bg-vault-800 border border-gold-500/30 hover:border-gold-500/60 text-gold-400 text-sm font-medium tracking-wide transition-all duration-200 shadow-[0_0_12px_rgba(249,115,22,0.1)] hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-gold-500/0 via-gold-500/8 to-gold-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <span className="relative z-10">Open Vault</span>
