@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 /**
  * One Piece TCG search using the official Bandai card list.
  *
@@ -94,7 +96,13 @@ function parseCardsFromHtml(html: string): OnePieceCardSummary[] {
     const typeMatch =
       /<span>[^<]+<\/span>\s*\|\s*<span>[^<]+<\/span>\s*\|\s*<span>([^<]+)<\/span>/.exec(section);
 
-    if (!idMatch || !nameMatch) continue;
+    if (!idMatch || !nameMatch) {
+      logger.warn(
+        `[onepiece] Failed to parse card section (idMatch=${!!idMatch}, nameMatch=${!!nameMatch}). ` +
+        `Preview: ${section.slice(0, 120).replace(/\n/g, " ")}`
+      );
+      continue;
+    }
 
     const id = idMatch[1];
     const name = nameMatch[1].trim();
@@ -146,8 +154,8 @@ export async function searchOnePieceCards(
       pageSize,
       total: allCards.length,
     };
-  } catch {
-    // Fail gracefully
+  } catch (err) {
+    logger.warn("[onepiece] searchOnePieceCards failed:", err instanceof Error ? err.message : err);
     return { cards: [], page, pageSize, total: 0 };
   }
 }

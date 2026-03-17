@@ -1,6 +1,22 @@
 const BASE_URL = "https://api.scryfall.com";
+const FETCH_TIMEOUT_MS = 15_000;
 
 const HEADERS = { "User-Agent": "TCGTracker/1.0" };
+
+async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("Scryfall API timed out");
+    }
+    throw new Error(`Scryfall API unreachable: ${err instanceof Error ? err.message : err}`);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -142,7 +158,7 @@ export async function searchMagicCards(
   try {
     const params = new URLSearchParams({ q: query, page: String(page) });
 
-    const res = await fetch(`${BASE_URL}/cards/search?${params}`, {
+    const res = await fetchWithTimeout(`${BASE_URL}/cards/search?${params}`, {
       headers: HEADERS,
       cache: "no-store",
     });
@@ -191,7 +207,7 @@ export async function getMagicCardById(
   id: string
 ): Promise<MagicCardDetail | ScryfallError | null> {
   try {
-    const res = await fetch(`${BASE_URL}/cards/${encodeURIComponent(id)}`, {
+    const res = await fetchWithTimeout(`${BASE_URL}/cards/${encodeURIComponent(id)}`, {
       headers: HEADERS,
       cache: "no-store",
     });

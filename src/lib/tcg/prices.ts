@@ -18,7 +18,8 @@
  *     card_name     TEXT,
  *     price_history JSONB         DEFAULT '[]'::JSONB,
  *     image_url     TEXT,
- *     cached_at     TIMESTAMPTZ   DEFAULT NOW()
+ *     cached_at     TIMESTAMPTZ   DEFAULT NOW(),
+ *     current_price NUMERIC(10,2)
  *   );
  *
  *   CREATE UNIQUE INDEX IF NOT EXISTS price_cache_card_game_currency_idx
@@ -30,6 +31,10 @@
  *   ALTER TABLE price_cache ADD COLUMN IF NOT EXISTS price        NUMERIC(10,2);
  *   ALTER TABLE price_cache ADD COLUMN IF NOT EXISTS updated_at   TIMESTAMPTZ   DEFAULT NOW();
  *
+ *   -- Backfill
+ *   UPDATE price_cache SET currency = 'EUR' WHERE currency IS NULL;
+ *   UPDATE price_cache SET price = current_price WHERE price IS NULL AND current_price IS NOT NULL;
+ *
  *   -- Replace the old (card_id, game) unique index with one that includes currency:
  *   DROP INDEX IF EXISTS price_cache_card_game_idx;
  *   CREATE UNIQUE INDEX IF NOT EXISTS price_cache_card_game_currency_idx
@@ -39,6 +44,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPokemonCardById } from "./pokemon";
 import { getMagicCardById, isScryfallError } from "./magic";
+import { searchYugiohCards } from "./yugioh";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -69,13 +75,12 @@ async function readCache(
 ): Promise<PriceInfo | null> {
   try {
     const supabase = createAdminClient();
-    // Try exact currency match first, then any entry for this card+game
     const { data } = await supabase
       .from("price_cache")
-      .select("current_price, source, cached_at, currency")
+      .select("price, current_price, source, cached_at, currency")
       .eq("card_id", cardId)
       .eq("game", game)
-      .limit(1)
+      .eq("currency", currency)
       .maybeSingle();
 
     if (!data) return null;
@@ -84,7 +89,7 @@ async function readCache(
     if (age >= CACHE_TTL_MS) return null;
 
     return {
-      price: data.current_price as number | null,
+      price: ((data.price ?? data.current_price) as number | null),
       currency: (data.currency as string | null) ?? currency,
       source: (data.source as string | null) ?? "cache",
       lastUpdated: data.cached_at as string,
@@ -114,8 +119,7 @@ async function writeCache(payload: {
         updated_at: now,
         price_history: [],
       },
-      // Works with old (card_id,game) index and new (card_id,game,currency) index
-      { onConflict: "card_id,game" }
+      { onConflict: "card_id,game,currency" }
     );
   } catch {
     // Cache write is non-critical — never throw
@@ -236,18 +240,111 @@ export async function getMagicCardPrice(
   };
 }
 
+// ─── Yu-Gi-Oh! ───────────────────────────────────────────────────────────────
+
+// Minimal raw shape needed for direct passcode lookup
+interface RawYgoCardMin {
+  name: string;
+  card_images?: Array<{ image_url_small?: string; image_url?: string }>;
+  card_prices?: Array<{ cardmarket_price?: string; tcgplayer_price?: string }>;
+}
+
+function mapYgoMin(raw: RawYgoCardMin): { name: string; imageUrl: string; price: number | null } {
+  const prices = raw.card_prices?.[0];
+  const parseP = (v: string | undefined): number | null => {
+    const n = parseFloat(v ?? "");
+    return isNaN(n) || n <= 0 ? null : n;
+  };
+  return {
+    name: raw.name,
+    imageUrl: raw.card_images?.[0]?.image_url_small ?? raw.card_images?.[0]?.image_url ?? "",
+    price: parseP(prices?.cardmarket_price) ?? parseP(prices?.tcgplayer_price) ?? null,
+  };
+}
+
+/**
+ * Get Yu-Gi-Oh! card price from cache or YGOPRODeck.
+ * cardId can be a numeric passcode (e.g., "46986414") or a card name.
+ * Prefers CardMarket (EUR) over TCGPlayer (USD).
+ */
+export async function getYugiohCardPrice(
+  cardId: string,
+  currency: "EUR" | "USD" = "EUR"
+): Promise<PriceInfo | null> {
+  const cached = await readCache(cardId, "yugioh", currency);
+  if (cached) return cached;
+
+  let card: { name: string; imageUrl: string; price: number | null } | null = null;
+
+  // Numeric passcode → use the faster ?id= endpoint
+  if (/^\d+$/.test(cardId)) {
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 15_000);
+      const res = await fetch(
+        `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${encodeURIComponent(cardId)}`,
+        { cache: "no-store", signal: controller.signal }
+      );
+      clearTimeout(t);
+      if (res.ok) {
+        const data = (await res.json()) as { data?: RawYgoCardMin[] };
+        const raw = data.data?.[0];
+        if (raw) card = mapYgoMin(raw);
+      }
+    } catch {
+      // fall through to fname search
+    }
+  }
+
+  // Name / fuzzy fallback via searchYugiohCards (uses fname= endpoint with timeout)
+  if (!card) {
+    const result = await searchYugiohCards(cardId, 1, 1).catch(() => null);
+    card = result?.cards[0] ?? null;
+  }
+
+  if (!card) return null;
+
+  const now = new Date().toISOString();
+  await writeCache({
+    card_id: cardId,
+    game: "yugioh",
+    currency,
+    price: card.price,
+    source: "ygoprodeck",
+    card_name: card.name,
+    image_url: card.imageUrl,
+  });
+
+  return { price: card.price, currency, source: "ygoprodeck", lastUpdated: now };
+}
+
+// ─── One Piece ────────────────────────────────────────────────────────────────
+
+/**
+ * One Piece TCG has no public market price API.
+ * Returns null — no price data is available from any public source.
+ */
+export async function getOnePieceCardPrice(
+  _cardId: string,
+  _currency: "EUR" | "USD" = "EUR"
+): Promise<PriceInfo | null> {
+  return null;
+}
+
 // ─── Unified entry point ──────────────────────────────────────────────────────
 
 /**
  * Unified price getter for any supported game.
- * Currently supports 'pokemon' and 'magic'.
+ * Handles cache read/write internally via Supabase.
  */
 export async function getCardPrice(
-  game: "pokemon" | "magic",
+  game: "pokemon" | "magic" | "yugioh" | "onepiece",
   cardId: string,
   currency: "EUR" | "USD" = "EUR"
 ): Promise<PriceInfo | null> {
   if (game === "pokemon") return getPokemonCardPrice(cardId, currency);
   if (game === "magic") return getMagicCardPrice(cardId, currency);
+  if (game === "yugioh") return getYugiohCardPrice(cardId, currency);
+  if (game === "onepiece") return getOnePieceCardPrice(cardId, currency);
   return null;
 }
