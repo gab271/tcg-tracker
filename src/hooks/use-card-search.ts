@@ -14,7 +14,12 @@ async function searchCards(
 ): Promise<CardSearchResult[]> {
   const params = new URLSearchParams({ game, q: query, pageSize: "20" });
   const res = await fetch(`/api/cards?${params}`);
-  if (!res.ok) return [];
+
+  // Throw on error so React Query can retry automatically
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error ?? `Search failed (${res.status})`);
+  }
 
   const data = await res.json();
   if (!data?.cards) return [];
@@ -25,6 +30,7 @@ async function searchCards(
       name: string;
       imageUrl: string;
       rarity?: string;
+      price?: number | null;
     }>
   ).map((card) => ({
     id: card.id,
@@ -32,12 +38,20 @@ async function searchCards(
     image: card.imageUrl,
     game,
     rarity: card.rarity ?? "Common",
-    price: 0, // price is fetched separately via useCardPrice
+    price: card.price ?? 0,
   }));
 }
 
-/** Debounced card search hook. Only fires after 500ms of no typing and min 2 chars. */
-export function useCardSearch(searchTerm: string, game = "pokemon") {
+/**
+ * Debounced card search hook.
+ * - Fires after 500ms of no typing and min 2 chars.
+ * - Pass `featuredQuery` to load default cards when searchTerm is empty.
+ */
+export function useCardSearch(
+  searchTerm: string,
+  game = "pokemon",
+  options?: { featuredQuery?: string }
+) {
   const [debouncedTerm, setDebouncedTerm] = useState("");
 
   useEffect(() => {
@@ -47,10 +61,15 @@ export function useCardSearch(searchTerm: string, game = "pokemon") {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  // Use featuredQuery as fallback when search is empty
+  const effectiveTerm = debouncedTerm || options?.featuredQuery || "";
+
   return useQuery({
-    queryKey: ["card-search", game, debouncedTerm],
-    queryFn: () => searchCards(debouncedTerm, game),
-    enabled: debouncedTerm.length >= 2,
+    queryKey: ["card-search", game, effectiveTerm],
+    queryFn: () => searchCards(effectiveTerm, game),
+    enabled: effectiveTerm.length >= 2,
     staleTime: 1000 * 60 * 5,
+    retry: 2,
+    retryDelay: (attempt) => attempt * 1500,
   });
 }

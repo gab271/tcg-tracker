@@ -1,22 +1,24 @@
 /**
- * GET /api/cards?game=pokemon|magic&q=pikachu&page=1&pageSize=20
+ * GET /api/cards?game=pokemon|magic|yugioh|onepiece&q=QUERY&page=1&pageSize=20
  *
- * Frontend integration hint:
- *   - AddCardModal / collection page: call this endpoint when the user types
- *     in the card-search input.  Example:
- *       fetch(`/api/cards?game=${game}&q=${query}&page=${page}`)
- *   - useCardSearch hook can be updated to call this instead of hitting
- *     pokemontcg.io directly, so all games are supported uniformly.
+ * Unified card search endpoint. Routes to the appropriate external API
+ * based on the `game` parameter:
+ *   pokemon   → PokemonTCG.io
+ *   magic     → Scryfall
+ *   yugioh    → YGOPRODeck
+ *   onepiece  → Bandai official card list
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { searchPokemonCards, type PokemonSearchResult } from "@/lib/tcg/pokemon";
 import { searchMagicCards, isScryfallError, type MagicSearchResult } from "@/lib/tcg/magic";
+import { searchYugiohCards, type YugiohSearchResult } from "@/lib/tcg/yugioh";
+import { searchOnePieceCards, type OnePieceSearchResult } from "@/lib/tcg/onepiece";
 import { redisGet, redisSet, REDIS_TTL } from "@/lib/redis";
 
-const VALID_GAMES = ["pokemon", "magic"] as const;
+const VALID_GAMES = ["pokemon", "magic", "yugioh", "onepiece"] as const;
 type Game = (typeof VALID_GAMES)[number];
-type SearchResult = PokemonSearchResult | MagicSearchResult;
+type SearchResult = PokemonSearchResult | MagicSearchResult | YugiohSearchResult | OnePieceSearchResult;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   if (!game || !VALID_GAMES.includes(game)) {
     return NextResponse.json(
-      { error: 'Missing or invalid "game" param. Use "pokemon" or "magic".' },
+      { error: 'Missing or invalid "game" param. Use "pokemon", "magic", "yugioh", or "onepiece".' },
       { status: 400 }
     );
   }
@@ -46,12 +48,10 @@ export async function GET(request: NextRequest) {
   const query = q.trim().toLowerCase();
   const cacheKey = `cards:${game}:${query}:${page}:${pageSize}`;
 
-  // 1. Redis cache (24 h) — fastest layer, avoids external API calls entirely
+  // 1. Redis cache — fastest layer
   const cached = await redisGet<SearchResult>(cacheKey);
   if (cached) {
-    return NextResponse.json(cached, {
-      headers: { "X-Cache": "HIT" },
-    });
+    return NextResponse.json(cached, { headers: { "X-Cache": "HIT" } });
   }
 
   try {
@@ -59,21 +59,29 @@ export async function GET(request: NextRequest) {
 
     if (game === "pokemon") {
       result = await searchPokemonCards(query, page, pageSize);
-    } else {
+    } else if (game === "magic") {
       const raw = await searchMagicCards(query, page, pageSize);
       if (isScryfallError(raw)) {
         const status = raw.status === 429 ? 429 : 502;
         return NextResponse.json({ error: raw.error }, { status });
       }
       result = raw;
+    } else if (game === "yugioh") {
+      result = await searchYugiohCards(query, page, pageSize);
+    } else {
+      // onepiece
+      result = await searchOnePieceCards(query, page, pageSize);
     }
 
-    // 2. Store in Redis for next requests
-    await redisSet(cacheKey, result, { ex: REDIS_TTL.SEARCH });
+    // 2. Cache in Redis (shorter TTL for One Piece since HTML parsing is fragile)
+    const ttl = game === "onepiece" ? REDIS_TTL.PRICE : REDIS_TTL.SEARCH;
+    await redisSet(cacheKey, result, { ex: ttl });
 
     return NextResponse.json(result, { headers: { "X-Cache": "MISS" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unexpected error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Use 503 for timeout/unreachable, 500 for other errors
+    const status = message.includes("timed out") || message.includes("unreachable") ? 503 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

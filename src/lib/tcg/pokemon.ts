@@ -1,6 +1,7 @@
 import { serverEnv } from "@/lib/config";
 
 const BASE_URL = "https://api.pokemontcg.io/v2";
+const FETCH_TIMEOUT_MS = 15_000;
 
 function getHeaders(): Record<string, string> {
   const key = serverEnv.POKEMONTCG_API_KEY;
@@ -18,6 +19,7 @@ export interface PokemonCardSummary {
   rarity: string;
   setName: string;
   hp: string | null;
+  price: number | null;
 }
 
 export interface PokemonCardDetail extends PokemonCardSummary {
@@ -59,18 +61,57 @@ interface RawPokemonCard {
   tcgplayer?: { prices?: Record<string, Record<string, unknown>> };
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function pickPrice(map: Record<string, unknown> | null | undefined, ...keys: string[]): number | null {
+  if (!map) return null;
+  for (const key of keys) {
+    const val = map[key];
+    if (val !== null && val !== undefined && val !== 0) {
+      const n = typeof val === "string" ? parseFloat(val) : (val as number);
+      if (!isNaN(n) && n > 0) return n;
+    }
+  }
+  return null;
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("PokemonTCG API timed out");
+    }
+    throw new Error(`PokemonTCG API unreachable: ${err instanceof Error ? err.message : err}`);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
 function mapSummary(card: RawPokemonCard): PokemonCardSummary {
+  const cm = card.cardmarket?.prices;
+  const tcg = card.tcgplayer?.prices;
+
+  let price: number | null = pickPrice(cm, "averageSellPrice", "trendPrice", "avg1", "avg7");
+  if (price === null && tcg) {
+    const variant = tcg.holofoil ?? tcg.normal ?? tcg.reverseHolofoil ?? Object.values(tcg)[0];
+    price = pickPrice(variant as Record<string, unknown>, "market", "mid", "low");
+  }
+
   return {
     id: card.id,
     name: card.name,
-    imageUrl: card.images.small,
+    imageUrl: card.images?.small ?? "",
     supertype: card.supertype,
     subtypes: card.subtypes ?? [],
     rarity: card.rarity ?? "Unknown",
-    setName: card.set.name,
+    setName: card.set?.name ?? "",
     hp: card.hp ?? null,
+    price,
   };
 }
 
@@ -78,11 +119,11 @@ function mapDetail(card: RawPokemonCard): PokemonCardDetail {
   return {
     ...mapSummary(card),
     types: card.types ?? [],
-    setId: card.set.id,
+    setId: card.set?.id ?? "",
     number: card.number ?? "",
     artist: card.artist ?? null,
     nationalPokedexNumbers: card.nationalPokedexNumbers ?? [],
-    largeImageUrl: card.images.large ?? null,
+    largeImageUrl: card.images?.large ?? null,
     cardmarketPrices: card.cardmarket?.prices ?? null,
     tcgplayerPrices: card.tcgplayer?.prices ?? null,
   };
@@ -99,30 +140,16 @@ export async function searchPokemonCards(
   page = 1,
   pageSize = 20
 ): Promise<PokemonSearchResult> {
-  // Build URL manually — URLSearchParams would encode ':' as '%3A' which
-  // breaks PokemonTCG.io's query syntax (it expects a literal colon).
+  // Build URL manually — URLSearchParams encodes ':' as '%3A' which
+  // breaks PokemonTCG.io's query syntax (expects a literal colon).
   const url =
     `${BASE_URL}/cards?q=name:${encodeURIComponent(query)}*` +
     `&page=${page}&pageSize=${pageSize}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
-
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      headers: getHeaders(),
-      cache: "no-store",
-      signal: controller.signal,
-    });
-  } catch (err) {
-    clearTimeout(timeout);
-    const msg = err instanceof Error && err.name === "AbortError"
-      ? "PokemonTCG API timed out"
-      : `PokemonTCG API unreachable: ${err instanceof Error ? err.message : err}`;
-    throw new Error(msg);
-  }
-  clearTimeout(timeout);
+  const res = await fetchWithTimeout(url, {
+    headers: getHeaders(),
+    cache: "no-store",
+  });
 
   if (!res.ok) {
     throw new Error(`PokemonTCG API error: ${res.status} ${res.statusText}`);
@@ -136,7 +163,7 @@ export async function searchPokemonCards(
   };
 
   return {
-    cards: data.data.map(mapSummary),
+    cards: (data.data ?? []).map(mapSummary),
     page: data.page,
     pageSize: data.pageSize,
     total: data.totalCount,
@@ -150,23 +177,12 @@ export async function searchPokemonCards(
 export async function getPokemonCardById(
   id: string
 ): Promise<PokemonCardDetail | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
+  const res = await fetchWithTimeout(`${BASE_URL}/cards/${encodeURIComponent(id)}`, {
+    headers: getHeaders(),
+    cache: "no-store",
+  }).catch(() => null);
 
-  let res: Response;
-  try {
-    res = await fetch(`${BASE_URL}/cards/${encodeURIComponent(id)}`, {
-      headers: getHeaders(),
-      cache: "no-store",
-      signal: controller.signal,
-    });
-  } catch (err) {
-    clearTimeout(timeout);
-    if (err instanceof Error && err.name === "AbortError") return null;
-    throw new Error(`PokemonTCG API unreachable: ${err instanceof Error ? err.message : err}`);
-  }
-  clearTimeout(timeout);
-
+  if (!res) return null;
   if (res.status === 404) return null;
 
   if (!res.ok) {
