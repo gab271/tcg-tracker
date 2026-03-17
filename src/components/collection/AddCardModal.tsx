@@ -80,28 +80,33 @@ export default function AddCardModal({ isOpen, onClose, onAddCard }: AddCardModa
                   autoFocus
                 />
                 {isFetching && (
-                  <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gold-500 animate-spin" />
+                  <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gold-500/60 animate-spin" />
                 )}
               </div>
             </div>
 
             {/* Results */}
             <div className="flex-1 overflow-y-auto p-6 bg-vault-900">
-              {searchTerm.trim().length >= 2 && !isFetching && results.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-gray-500 py-12">
-                  <Search className="w-12 h-12 mb-4 opacity-20" />
-                  <p className="uppercase tracking-widest text-sm font-medium mb-1">No cards found</p>
-                  <p className="text-xs">Try adjusting your search terms.</p>
-                </div>
-              ) : searchTerm.trim().length < 2 ? (
+              {searchTerm.trim().length < 2 ? (
                 <div className="h-full flex flex-col items-center justify-center text-gray-500 py-12">
                   <div className="w-16 h-16 rounded-full border border-gray-800 flex items-center justify-center mb-4 bg-vault-800">
                     <Search className="w-6 h-6 text-gold-500/30" />
                   </div>
                   <p className="uppercase tracking-widest text-sm font-medium">Type to search</p>
-                  <p className="text-xs mt-2 text-center max-w-xs">
-                    Connecting to Pokémon TCG API Database...
+                  <p className="text-xs mt-2 text-center max-w-xs text-gray-600">
+                    Search by name — e.g. Charizard, Pikachu
                   </p>
+                </div>
+              ) : isFetching ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-500 py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-gold-500/50 mb-4" />
+                  <p className="uppercase tracking-widest text-sm font-medium">Searching...</p>
+                </div>
+              ) : results.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-500 py-12">
+                  <Search className="w-12 h-12 mb-4 opacity-20" />
+                  <p className="uppercase tracking-widest text-sm font-medium mb-1">No cards found</p>
+                  <p className="text-xs">Try adjusting your search terms.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

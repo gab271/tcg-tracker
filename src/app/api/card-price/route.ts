@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { serverEnv } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import type { PriceHistoryEntry } from "@/types/database";
+import { redisGet, redisSet, REDIS_TTL } from "@/lib/redis";
 
 const supabase = createAdminClient();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -254,13 +255,17 @@ function normalizeGame(raw: string): string {
   return s;
 }
 
-// --- GET /api/card-price?cardId=xxx&game=pokemon|magic|yugioh|onepiece ---
+// --- GET /api/card-price?cardId=xxx&game=pokemon|magic|yugioh|onepiece&currency=EUR|USD ---
 const VALID_GAMES = ["pokemon", "magic", "yugioh", "onepiece"] as const;
+const VALID_CURRENCIES = ["EUR", "USD"] as const;
+type Currency = (typeof VALID_CURRENCIES)[number];
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const cardId = searchParams.get("cardId");
   const rawGame = searchParams.get("game");
+  const rawCurrency = (searchParams.get("currency") ?? "EUR").toUpperCase() as Currency;
+  const currency: Currency = VALID_CURRENCIES.includes(rawCurrency) ? rawCurrency : "EUR";
 
   if (!cardId || !rawGame) {
     return NextResponse.json(
@@ -278,7 +283,14 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // 1. Check Supabase cache
+  // 1. Redis cache (1 h) — fastest layer, zero DB/API calls
+  const redisCacheKey = `price:${game}:${cardId}:${currency}`;
+  const redisCached = await redisGet<Record<string, unknown>>(redisCacheKey);
+  if (redisCached) {
+    return NextResponse.json({ ...redisCached, cached: true }, { headers: { "X-Cache": "HIT" } });
+  }
+
+  // 2. Check Supabase cache
   try {
     const { data: cached } = await supabase
       .from("price_cache")
@@ -295,7 +307,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           currentPrice: cached.current_price,
           priceHistory: cached.price_history,
-          currency: "EUR",
+          currency: (cached.currency as string | null) ?? currency,
           source: cached.source,
           name: cached.card_name,
           image: cached.image_url,
@@ -331,6 +343,7 @@ export async function GET(request: NextRequest) {
 
   // 3. Upsert into Supabase cache
   try {
+    const now = new Date().toISOString();
     await supabase.from("price_cache").upsert(
       {
         card_id: cardId,
@@ -340,7 +353,11 @@ export async function GET(request: NextRequest) {
         price_history: priceHistory,
         source: result.source,
         image_url: result.image,
-        cached_at: new Date().toISOString(),
+        cached_at: now,
+        // new columns (no-op if not yet migrated)
+        currency: result.currency,
+        price: result.currentPrice,
+        updated_at: now,
       },
       { onConflict: "card_id,game" }
     );
@@ -348,14 +365,16 @@ export async function GET(request: NextRequest) {
     // Cache write failure is non-critical
   }
 
-  // 4. Return response
-  return NextResponse.json({
+  // 4. Store in Redis and return response
+  const payload = {
     currentPrice: result.currentPrice,
     priceHistory,
     currency: result.currency,
     source: result.source,
     name: result.name,
     image: result.image,
-    cached: false,
-  });
+  };
+  await redisSet(redisCacheKey, payload, { ex: REDIS_TTL.PRICE });
+
+  return NextResponse.json({ ...payload, cached: false }, { headers: { "X-Cache": "MISS" } });
 }
