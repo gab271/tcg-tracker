@@ -1,5 +1,70 @@
 /** Types matching Supabase database schema. */
 
+// ── Offers ──────────────────────────────────────────────────────────────────
+export interface DbOffer {
+  id: string;
+  listing_id: string;
+  buyer_id: string;
+  seller_id: string;
+  buyer_username: string | null;
+  offered_price: number;
+  message: string | null;
+  status: "pending" | "accepted" | "rejected" | "withdrawn" | "expired";
+  created_at: string;
+  updated_at: string;
+  expires_at: string;
+}
+
+// ── Transactions ─────────────────────────────────────────────────────────────
+export interface DbTransaction {
+  id: string;
+  listing_id: string;
+  offer_id: string | null;
+  buyer_id: string;
+  seller_id: string;
+  card_id: string;
+  card_name: string;
+  card_image: string | null;
+  game: string;
+  condition: string;
+  final_price: number;
+  buyer_username: string | null;
+  seller_username: string | null;
+  status: "pending" | "shipped" | "completed" | "cancelled" | "disputed";
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Wishlists ─────────────────────────────────────────────────────────────────
+export interface DbWishlistItem {
+  id: string;
+  user_id: string;
+  card_id: string;
+  card_name: string;
+  card_image: string | null;
+  game: string;
+  max_price: number | null;
+  created_at: string;
+}
+
+// ── Price Alerts ──────────────────────────────────────────────────────────────
+export interface DbPriceAlert {
+  id: string;
+  user_id: string;
+  card_id: string;
+  card_name: string;
+  card_image: string | null;
+  game: string;
+  target_price: number;
+  direction: "below" | "above";
+  is_active: boolean;
+  last_triggered_at: string | null;
+  last_price: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DbDeck {
   id: string;
   user_id: string;
