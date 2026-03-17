@@ -67,7 +67,7 @@ export default function DashboardPage() {
 
       {/* ━━━ BATTLEFIELD BACKGROUND ━━━ */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[#080a0d]" />
+        <div className="absolute inset-0 bg-vault-900" />
         <div
           className="absolute inset-0 opacity-[0.022]"
           style={{
@@ -265,15 +265,15 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.32, duration: 0.5 }}
-            className="lg:col-span-8 rounded-2xl border border-gray-800/40 p-5 flex flex-col"
-            style={{ background: "rgba(22, 25, 31, 0.55)" }}
+            className="lg:col-span-8 rounded-2xl border border-gold-500/12 p-5 flex flex-col"
+            style={{ background: "rgba(19, 24, 38, 0.75)" }}
           >
             <div className="flex justify-between items-start mb-5 flex-wrap gap-3">
               <div>
                 <h3 className="font-display text-sm font-bold text-white tracking-wide">Value History</h3>
                 <p className="text-[10px] text-gray-600 mt-0.5">Portfolio performance · All games</p>
               </div>
-              <div className="flex items-center gap-1 bg-black/30 rounded-xl p-1 border border-gray-800/40">
+              <div className="flex items-center gap-1 bg-black/30 rounded-xl p-1 border border-gold-500/12">
                 {["7D", "30D", "3M", "1Y"].map((r) => (
                   <button
                     key={r}
@@ -302,8 +302,8 @@ export default function DashboardPage() {
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.42, duration: 0.45 }}
-              className="rounded-2xl border border-gray-800/40 p-5"
-              style={{ background: "rgba(22, 25, 31, 0.55)" }}
+              className="rounded-2xl border border-gold-500/12 p-5"
+              style={{ background: "rgba(19, 24, 38, 0.75)" }}
             >
               <h3 className="font-display text-sm font-bold text-white tracking-wide mb-4">Collection Split</h3>
               {gameDistribution.length === 0 ? (
@@ -345,8 +345,8 @@ export default function DashboardPage() {
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.52, duration: 0.45 }}
-              className="rounded-2xl border border-gray-800/40 p-5 flex flex-col flex-1"
-              style={{ background: "rgba(22, 25, 31, 0.55)" }}
+              className="rounded-2xl border border-gold-500/12 p-5 flex flex-col flex-1"
+              style={{ background: "rgba(19, 24, 38, 0.75)" }}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">

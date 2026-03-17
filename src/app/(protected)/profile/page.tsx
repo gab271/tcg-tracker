@@ -148,7 +148,7 @@ export default function ProfilePage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="relative min-h-screen bg-[#080a0d]">
+    <div className="relative min-h-screen bg-vault-900">
 
       {/* ── Atmospheric background ── */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -170,7 +170,7 @@ export default function ProfilePage() {
           }}
         />
         {/* Faint bottom vignette */}
-        <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-[#080a0d] to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-vault-900 to-transparent" />
       </div>
 
       <div className="relative z-10 max-w-5xl mx-auto px-5 lg:px-10 py-10">
@@ -184,8 +184,8 @@ export default function ProfilePage() {
           transition={{ duration: 0.55, ease: "easeOut" }}
           className="relative overflow-hidden rounded-3xl mb-5"
           style={{
-            background: "linear-gradient(160deg, #13161d 0%, #0d0f14 50%, #090b10 100%)",
-            border: "1px solid rgba(255,255,255,0.06)",
+            background: "linear-gradient(160deg, #131826 0%, #0b0f1c 50%, #06080e 100%)",
+            border: "1px solid rgba(212,132,26,0.1)",
             boxShadow: `0 0 100px ${gameCfg.color}06, inset 0 1px 0 rgba(255,255,255,0.04)`,
           }}
         >
@@ -414,7 +414,7 @@ export default function ProfilePage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay, duration: 0.45 }}
-              className="relative overflow-hidden rounded-2xl p-4 sm:p-5 border border-white/6 bg-[#11141a] group hover:border-white/10 transition-colors"
+              className="relative overflow-hidden rounded-2xl p-4 sm:p-5 border border-gold-500/10 bg-vault-700 group hover:border-gold-500/20 transition-colors"
             >
               {/* Hover glow */}
               <div
@@ -452,10 +452,10 @@ export default function ProfilePage() {
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.35, duration: 0.5 }}
-            className="rounded-2xl overflow-hidden border border-white/6 bg-[#11141a] flex flex-col"
+            className="rounded-2xl overflow-hidden border border-gold-500/10 bg-vault-700 flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/6">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gold-500/10">
               <div className="flex items-center gap-2">
                 <History className="w-3.5 h-3.5 text-gold-400" />
                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
@@ -535,10 +535,10 @@ export default function ProfilePage() {
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.35, duration: 0.5 }}
-            className="rounded-2xl overflow-hidden border border-white/6 bg-[#11141a] flex flex-col"
+            className="rounded-2xl overflow-hidden border border-gold-500/10 bg-vault-700 flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/6">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gold-500/10">
               <div className="flex items-center gap-2">
                 <Trophy className="w-3.5 h-3.5 text-gold-400" />
                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">

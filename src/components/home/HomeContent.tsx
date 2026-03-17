@@ -164,9 +164,9 @@ export default function HomeContent() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-y-12 md:gap-y-0 relative">
             {[
-              { value: "12400", suffix: "+", label: "vaults live", sublabel: "active collectors worldwide", prefix: "" },
-              { value: "2.3", suffix: "M", label: "in tracked value", sublabel: "across all vaults today", prefix: "$" },
-              { value: "847", suffix: "K+", label: "cards catalogued", sublabel: "across 4 games", prefix: "" },
+              { value: "12400", suffix: "+", label: "active vaults", sublabel: "Collectors who know what they own", prefix: "" },
+              { value: "2.3", suffix: "M", label: "in tracked value", sublabel: "Charizards, Lotuses, manga rares — all counted", prefix: "$" },
+              { value: "847", suffix: "K+", label: "cards catalogued", sublabel: "Pokémon · MTG · One Piece · Yu-Gi-Oh!", prefix: "" },
             ].map((stat, i) => (
               <motion.div
                 key={i}
@@ -202,29 +202,32 @@ export default function HomeContent() {
               <div>
                 <p className="text-gold-500/70 text-[10px] uppercase tracking-[0.25em] font-semibold mb-4">Your vault · live</p>
                 <h2 className="font-display text-3xl md:text-4xl font-bold text-white leading-[1.15]">
-                  Know what your collection<br />
-                  <span className="text-gold-gradient">is worth. Right now.</span>
+                  Every card you own —<br />
+                  <span className="text-gold-gradient">valued, tracked, and watched.</span>
                 </h2>
+                <p className="text-gray-400 text-base mt-4 leading-relaxed">
+                  Real-time prices. Daily portfolio updates. Alerts when your grails move.
+                </p>
               </div>
 
               <div className="space-y-6 pt-2">
                 {[
                   {
-                    icon: "◆",
-                    title: "Add a card in 10 seconds",
-                    desc: "Search by name, set, or number. We pull condition multipliers, PSA premiums, and current market pricing automatically.",
+                    icon: "→",
+                    title: "Add any card in seconds",
+                    desc: "Search by name, number, or set. Price auto-fills with condition multipliers and PSA premiums. Done.",
                     col: "text-gold-400",
                   },
                   {
-                    icon: "▲",
-                    title: "Your vault value, updated daily",
-                    desc: "See your total number every morning. Watch which card moved overnight. Know exactly where you stand.",
+                    icon: "→",
+                    title: "Your vault value. Updated every morning.",
+                    desc: "See exactly what changed overnight — card by card. Know where you stand before the market opens.",
                     col: "text-electric-400",
                   },
                   {
-                    icon: "◉",
-                    title: "Alerts when your grails spike",
-                    desc: "Set a target price. We watch the market. When it hits, you'll know before anyone in your local group chat.",
+                    icon: "→",
+                    title: "Grail alert. Your card just spiked.",
+                    desc: "Set a target price. We watch the market 24/7. When it hits, you'll know before your group chat does.",
                     col: "text-fire-400",
                   },
                 ].map((feat, i) => (
@@ -246,7 +249,7 @@ export default function HomeContent() {
               </div>
 
               <button className="inline-flex items-center gap-2 px-7 py-3.5 bg-fire-500 hover:bg-fire-400 text-white font-bold rounded-sm transition-all duration-200 text-sm uppercase tracking-wider shadow-[0_0_24px_rgba(249,115,22,0.3)] hover:shadow-[0_0_40px_rgba(249,115,22,0.55)]">
-                Start tracking free
+                Track my collection
                 <ArrowUpRight className="w-4 h-4" />
               </button>
             </div>
@@ -450,29 +453,29 @@ export default function HomeContent() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
-                user: "PkmnMaster_99",
-                avatar: "P",
+                user: "Marcus D.",
+                avatar: "M",
                 avatarBg: "from-red-700 to-orange-800",
-                review: "Caught my Charizard SAR spike 6 days before it peaked. Sold at $842 right into the hype. The alert was free. The call was worth $280.",
-                tag: "Pokémon · 8 years · 340 cards",
+                review: "I had no idea how much my collection was worth. I just kept buying. When I finally added everything and saw $14,200 in the dashboard, I actually had to sit down for a second. Now I check it every week like it's my portfolio.",
+                tag: "Pokémon collector · 8 years · 340 cards in vault",
                 rotation: -1.5,
                 accent: "border-l-red-500",
               },
               {
-                user: "LotusSeeker",
-                avatar: "L",
+                user: "James R.",
+                avatar: "J",
                 avatarBg: "from-blue-700 to-indigo-800",
-                review: "I have 3 binders, 4 games, zero time for spreadsheets. First tracker where the number on screen actually matches what my collection is worth.",
-                tag: "MTG vintage · 15 years · 600+ cards",
+                review: "I collect Vintage MTG. Prices on Reserved List cards move fast and you rarely get warned. I set an alert on my Mox Sapphire at $4,000 — it notified me when it crossed. Sold two weeks later at $4,350. Just information I didn't have before.",
+                tag: "MTG Vintage · 12 years · 620 cards tracked",
                 rotation: 0,
                 accent: "border-l-blue-500",
               },
               {
-                user: "OP_PirateKing",
-                avatar: "O",
+                user: "Kai T.",
+                avatar: "K",
                 avatarBg: "from-yellow-600 to-orange-700",
-                review: "Scanning Japanese One Piece cards and having it pull the right rarity, set, and market value in 3 seconds — I stopped using every other tracker the same day.",
-                tag: "One Piece TCG · 2 years · 180 cards",
+                review: "I collect One Piece and Pokémon. Before this I had a spreadsheet for each game — it was a mess. Now everything's in one place, I can see the combined value, and adding new pulls takes 30 seconds.",
+                tag: "One Piece + Pokémon · 180 cards in vault",
                 rotation: 1.5,
                 accent: "border-l-yellow-500",
               },
@@ -516,7 +519,11 @@ export default function HomeContent() {
             className="text-center mb-14"
           >
             <p className="text-gold-500/70 text-[10px] uppercase tracking-[0.25em] font-semibold mb-3">Pricing</p>
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-white">Start free. Go pro when ready.</h2>
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-white">Free to start. Pro when your collection demands it.</h2>
+            <p className="text-gray-500 text-sm mt-4 max-w-sm mx-auto">
+              Your Charizard ex moved $40 last week.<br />
+              <span className="text-gray-400">Did you have an alert set?</span>
+            </p>
           </motion.div>
 
           <div className="flex flex-col-reverse md:grid md:grid-cols-2 gap-6 items-stretch">
@@ -528,17 +535,17 @@ export default function HomeContent() {
               viewport={{ once: true }}
               className="bg-vault-700/70 border border-gray-700/50 rounded-2xl p-8 flex flex-col shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
             >
-              <h3 className="font-display text-2xl font-bold text-white mb-1">Basic</h3>
-              <p className="text-gray-400 text-sm mb-6">For collectors just getting started. Free, always.</p>
+              <h3 className="font-display text-2xl font-bold text-white mb-1">Free Vault</h3>
+              <p className="text-gray-400 text-sm mb-6">Perfect for getting started. No credit card, ever.</p>
               <div className="font-display text-4xl font-bold text-white mb-8">$0<span className="text-lg text-gray-500 font-normal">/mo</span></div>
               <ul className="space-y-3.5 mb-8 flex-grow text-sm">
-                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gray-400 w-4 h-4 shrink-0" /> Up to 100 cards</li>
-                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gray-400 w-4 h-4 shrink-0" /> Basic portfolio tracking</li>
-                <li className="flex items-center gap-3 text-gray-500 opacity-45"><Check className="text-gray-700 w-4 h-4 shrink-0" /><span className="line-through">Real-time price alerts</span></li>
-                <li className="flex items-center gap-3 text-gray-500 opacity-45"><Check className="text-gray-700 w-4 h-4 shrink-0" /><span className="line-through">Export to CSV</span></li>
+                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gray-400 w-4 h-4 shrink-0" /> Up to 100 cards tracked</li>
+                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gray-400 w-4 h-4 shrink-0" /> Daily vault value</li>
+                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gray-400 w-4 h-4 shrink-0" /> 30-day price history</li>
+                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gray-400 w-4 h-4 shrink-0" /> All 4 games supported</li>
               </ul>
               <button className="w-full py-3.5 rounded-xl border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white font-semibold transition-colors text-sm">
-                Start free
+                Open your free vault
               </button>
             </motion.div>
 
@@ -550,21 +557,24 @@ export default function HomeContent() {
               className="bg-gradient-to-b from-amber-950/70 to-vault-700/90 border-2 border-gold-500/70 rounded-2xl p-8 relative shadow-[0_0_50px_rgba(212,132,26,0.18),0_4px_32px_rgba(0,0,0,0.6)] flex flex-col md:scale-[1.03]"
             >
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gold-500 text-vault-900 font-bold px-4 py-1 rounded-full text-xs tracking-widest uppercase">
-                Most Popular
+                Recommended
               </div>
               <h3 className="font-display text-2xl font-bold text-gold-400 mb-1">Pro Vault</h3>
-              <p className="text-gray-400 text-sm mb-6">For serious collectors who track every move.</p>
+              <p className="text-gray-400 text-sm mb-6">For collectors who take their vault seriously.</p>
               <div className="font-display text-4xl font-bold text-white mb-8">$4.99<span className="text-lg text-gray-400 font-normal">/mo</span></div>
               <ul className="space-y-3.5 mb-8 flex-grow text-sm">
-                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gold-500 w-4 h-4 shrink-0" /> Unlimited cards</li>
-                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gold-500 w-4 h-4 shrink-0" /> Advanced analytics & charts</li>
-                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gold-500 w-4 h-4 shrink-0" /> Real-time price alerts</li>
+                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gold-500 w-4 h-4 shrink-0" /> Unlimited cards — no cap, no exceptions</li>
+                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gold-500 w-4 h-4 shrink-0" /> Real-time price alerts on any card</li>
+                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gold-500 w-4 h-4 shrink-0" /> Advanced analytics & 12-month history</li>
                 <li className="flex items-center gap-3 text-gray-200"><Check className="text-gold-500 w-4 h-4 shrink-0" /> Export to CSV & PDF</li>
-                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gold-500 w-4 h-4 shrink-0" /> 12-month price history</li>
+                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gold-500 w-4 h-4 shrink-0" /> Priority card database updates</li>
               </ul>
               <button className="w-full py-3.5 rounded-xl bg-fire-500 hover:bg-fire-400 text-white font-bold transition-all duration-200 shadow-[0_0_24px_rgba(249,115,22,0.35)] hover:shadow-[0_0_40px_rgba(249,115,22,0.6)] text-sm">
                 Upgrade to Pro Vault
               </button>
+              <p className="text-center text-[10px] text-gray-600 mt-3 font-mono">
+                Less than a pack of cards per month. Cancel anytime.
+              </p>
             </motion.div>
 
           </div>
@@ -629,20 +639,20 @@ export default function HomeContent() {
               <span className="text-gold-gradient">Do you know what it is?</span>
             </h2>
             <p className="text-gray-400 text-lg mb-10 leading-relaxed">
-              Join 12,400 collectors who check theirs every morning.
+              12,400 collectors who finally know what they own — and what it&apos;s worth.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button className="px-10 py-4 rounded-sm bg-fire-500 hover:bg-fire-400 text-white font-bold text-sm uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_28px_rgba(249,115,22,0.4)] hover:shadow-[0_0_50px_rgba(249,115,22,0.65)] font-display">
-                Open Your Vault — Free
+                Open My Vault — It&apos;s Free
               </button>
               <button className="px-10 py-4 rounded-sm border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white font-medium text-sm transition-colors">
-                See the Demo
+                Watch a live vault →
               </button>
             </div>
 
             <p className="mt-6 text-[11px] text-gray-600 tracking-wide font-mono">
-              No credit card. No import limits. Just your vault.
+              Free on up to 100 cards. No credit card. Cancel Pro anytime.
             </p>
           </motion.div>
         </div>

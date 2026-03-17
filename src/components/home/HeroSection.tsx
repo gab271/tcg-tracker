@@ -106,7 +106,7 @@ export default function HeroSection() {
           >
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             <span className="text-gold-400 text-xs font-semibold tracking-[0.15em] uppercase">
-              12,400+ collectors tracking live
+              12,400 collectors tracking $2.3M in cards right now
             </span>
           </motion.div>
 
@@ -115,11 +115,10 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="font-display text-4xl md:text-5xl lg:text-[3.5rem] font-bold tracking-tight leading-[1.12] mb-5 text-white"
+            className="font-display text-3xl md:text-4xl lg:text-[2.75rem] font-bold tracking-tight leading-[1.15] mb-5 text-white"
           >
-            Your rarest pulls.<br />
-            <span className="text-gold-gradient">Tracked. Valued.</span><br />
-            <span className="text-white/90">Secured.</span>
+            Your collection is worth <span className="text-gold-gradient">more than you think.</span><br />
+            <span className="text-white/90">It&apos;s time you knew how much.</span>
           </motion.h1>
 
           <motion.p
@@ -128,9 +127,8 @@ export default function HeroSection() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg text-gray-400 mb-6 leading-relaxed"
           >
-            From your first Base Set Charizard to a PSA&nbsp;10 Black Lotus —
-            every card deserves a proper home. Track Pokémon, MTG, One Piece
-            and Yu-Gi-Oh! all in one vault.
+            Real-time prices. Daily vault updates. Alerts when your grails move.
+            One place for every game you collect — Pokémon, MTG, One Piece and Yu-Gi-Oh!
           </motion.p>
 
           {/* Rarity tier indicators */}
@@ -157,21 +155,26 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.33 }}
-            className="flex flex-col sm:flex-row gap-3 mb-10"
+            className="mb-10"
           >
-            <Link
-              href="/signup"
-              className="group inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-fire-500 hover:bg-fire-400 text-white font-bold rounded-sm transition-all duration-300 shadow-[0_0_24px_rgba(249,115,22,0.35)] hover:shadow-[0_0_40px_rgba(249,115,22,0.6)] text-sm uppercase tracking-wider"
-            >
-              Start for free
-              <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-            <Link
-              href="/market"
-              className="inline-flex items-center justify-center px-7 py-3.5 border border-gray-700/80 hover:border-gray-500 text-gray-400 hover:text-white font-medium rounded-sm transition-all duration-300 text-sm"
-            >
-              Browse Market
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3 mb-3">
+              <Link
+                href="/signup"
+                className="group inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-fire-500 hover:bg-fire-400 text-white font-bold rounded-sm transition-all duration-300 shadow-[0_0_24px_rgba(249,115,22,0.35)] hover:shadow-[0_0_40px_rgba(249,115,22,0.6)] text-sm uppercase tracking-wider"
+              >
+                Open My Vault — It&apos;s Free
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+              <Link
+                href="/market"
+                className="inline-flex items-center justify-center px-7 py-3.5 border border-gray-700/80 hover:border-gray-500 text-gray-400 hover:text-white font-medium rounded-sm transition-all duration-300 text-sm"
+              >
+                See live prices →
+              </Link>
+            </div>
+            <p className="text-[11px] text-gray-600 font-mono tracking-wide">
+              Free forever on up to 100 cards. No credit card needed.
+            </p>
           </motion.div>
 
           {/* Recent pulls feed */}

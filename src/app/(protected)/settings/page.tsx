@@ -77,7 +77,7 @@ const CURRENCY_SYMBOLS: Record<AppPrefs["currency"], string> = { EUR: "€", USD
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-2xl border border-white/8 bg-[#11141a] overflow-hidden ${className}`}
+      className={`rounded-2xl border border-gold-500/12 bg-vault-700 overflow-hidden ${className}`}
     >
       {children}
     </div>
@@ -86,7 +86,7 @@ function SectionCard({ children, className = "" }: { children: React.ReactNode; 
 
 function SectionHeader({ title, description }: { title: string; description?: string }) {
   return (
-    <div className="px-6 py-4 border-b border-white/6">
+    <div className="px-6 py-4 border-b border-gold-500/10">
       <h3 className="text-sm font-semibold text-white">{title}</h3>
       {description && <p className="text-xs text-gray-600 mt-0.5">{description}</p>}
     </div>
@@ -127,10 +127,10 @@ function InputField({
           placeholder={placeholder}
           autoComplete={autoComplete}
           readOnly={readOnly}
-          className={`w-full bg-[#0a0c10] border rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-gray-700 focus:outline-none transition-colors
+          className={`w-full bg-vault-900 border rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-gray-700 focus:outline-none transition-colors
             ${readOnly
               ? "border-white/5 text-gray-500 cursor-default"
-              : "border-white/10 focus:border-gold-500/40 focus:ring-1 focus:ring-gold-500/20"
+              : "border-gold-500/15 focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/20"
             }
             ${suffix ? "pr-10" : ""}
           `}
@@ -555,7 +555,7 @@ export default function SettingsPage() {
     <div className="relative min-h-screen">
       {/* Background */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[#080a0d]" />
+        <div className="absolute inset-0 bg-vault-900" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-gold-500/3 rounded-full blur-[120px]" />
       </div>
 
@@ -1071,7 +1071,7 @@ export default function SettingsPage() {
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead>
-                            <tr className="border-b border-white/6">
+                            <tr className="border-b border-gold-500/8">
                               <th className="text-left text-[10px] font-bold text-gray-600 uppercase tracking-widest pb-3">Date</th>
                               <th className="text-left text-[10px] font-bold text-gray-600 uppercase tracking-widest pb-3">Description</th>
                               <th className="text-right text-[10px] font-bold text-gray-600 uppercase tracking-widest pb-3">Amount</th>
@@ -1301,7 +1301,7 @@ export default function SettingsPage() {
                       onChange={(e) => setDeleteConfirm(e.target.value)}
                       placeholder="DELETE"
                       autoFocus
-                      className="w-full bg-[#0a0c10] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder:text-gray-700 focus:outline-none focus:border-red-500/40 transition-colors"
+                      className="w-full bg-vault-900 border border-red-900/30 rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder:text-gray-700 focus:outline-none focus:border-red-500/40 transition-colors"
                     />
                   </div>
                 </div>
