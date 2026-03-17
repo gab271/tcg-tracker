@@ -2,15 +2,23 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Colors — Cosmic Fire palette */
-  --color-vault-900: #080b14;
-  --color-vault-800: #0d1120;
-  --color-vault-700: #131928;
-  /* Fire orange (primary accent) */
-  --color-gold-500: #f97316;
-  --color-gold-400: #fb923c;
-  --color-gold-300: #fdba74;
-  /* Electric blue (secondary accent) */
+  /* ── Backgrounds: Cosmic depth hierarchy ── */
+  --color-vault-900: #06080e;   /* page base — near-black space */
+  --color-vault-800: #0b0f1c;   /* elevated surface — nav, ticker */
+  --color-vault-700: #131826;   /* card surface — clearly separated */
+  --color-vault-600: #1c2238;   /* hover / most elevated */
+
+  /* ── Gold: Premium · Value · Rarity · Identity ── */
+  --color-gold-500: #d4841a;    /* rich amber-gold — precious metal */
+  --color-gold-400: #e8a030;    /* lighter gold — hover / secondary */
+  --color-gold-300: #f5c050;    /* bright gold — highlights */
+
+  /* ── Fire: Action · CTA · Conversion · Urgency ── */
+  --color-fire-500: #f97316;    /* primary CTA orange */
+  --color-fire-400: #fb923c;    /* hover state */
+  --color-fire-300: #fdba74;    /* subtle fire / tint */
+
+  /* ── Electric: Info · Charts · MTG accent ── */
   --color-electric-500: #3b82f6;
   --color-electric-400: #60a5fa;
   --color-electric-300: #93c5fd;
@@ -23,7 +31,7 @@
 
 :root {
   --background: var(--color-vault-900);
-  --foreground: #e8eaf0;
+  --foreground: #dde3f0;
 }
 
 body {
@@ -33,29 +41,66 @@ body {
   overflow-x: hidden;
 }
 
-/* Custom utilities */
+/* ══ Semantic Color Rules ════════════════════════════════════════
+   GOLD  → prices, rarity stars, premium badges, section labels,
+           nav active state, portfolio value, testimonial accents
+   FIRE  → primary CTA buttons, "Open Vault", "Start Free",
+           "Upgrade to Pro", hover glows on action elements
+   ELEC  → chart lines, MTG accent, live/info badges
+════════════════════════════════════════════════════════════════ */
+
+/* ── Gold utilities — Premium identity ── */
 @utility text-gold-gradient {
-  background: linear-gradient(135deg, var(--color-gold-300), var(--color-gold-500), var(--color-electric-400));
+  background: linear-gradient(135deg, var(--color-gold-300), var(--color-gold-500));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 @utility bg-gold-gradient {
-  background: linear-gradient(135deg, var(--color-gold-400), var(--color-gold-500), var(--color-electric-500));
+  background: linear-gradient(135deg, var(--color-gold-400), var(--color-gold-500));
 }
 
 @utility vault-border {
-  border: 1px solid rgba(249, 115, 22, 0.2);
+  border: 1px solid rgba(212, 132, 26, 0.2);
 }
 
 @utility vault-glow {
-  box-shadow: 0 0 15px rgba(249, 115, 22, 0.15);
+  box-shadow: 0 0 16px rgba(212, 132, 26, 0.18);
+}
+
+/* ── Fire utilities — Action / CTA ── */
+@utility text-fire-gradient {
+  background: linear-gradient(135deg, var(--color-fire-300), var(--color-fire-500));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@utility bg-fire-gradient {
+  background: linear-gradient(135deg, var(--color-fire-400), var(--color-fire-500));
+}
+
+@utility fire-border {
+  border: 1px solid rgba(249, 115, 22, 0.35);
+}
+
+@utility fire-glow {
+  box-shadow: 0 0 24px rgba(249, 115, 22, 0.3);
+}
+
+/* ── Card surface — elevated from page ── */
+@utility card-surface {
+  background-color: var(--color-vault-700);
+  border: 1px solid rgba(212, 132, 26, 0.12);
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 @utility font-display {
   font-family: var(--font-display);
 }
+
+/* ── Animations ── */
 
 /* Card holographic shimmer */
 @keyframes holoshimmer {
@@ -81,10 +126,16 @@ body {
   66%       { transform: translateY(-7px)  rotate(-5deg);  opacity: 0.40; }
 }
 
-/* Rarity glow pulse */
+/* Rarity glow pulse — GOLD (premium, not action) */
 @keyframes rarityPulse {
-  0%, 100% { box-shadow: 0 0 12px rgba(249,115,22,0.35); }
-  50%       { box-shadow: 0 0 30px rgba(249,115,22,0.75), 0 0 60px rgba(59,130,246,0.25); }
+  0%, 100% { box-shadow: 0 0 12px rgba(212, 132, 26, 0.40); }
+  50%       { box-shadow: 0 0 32px rgba(212, 132, 26, 0.80), 0 0 64px rgba(245, 192, 80, 0.20); }
+}
+
+/* Fire CTA pulse — for primary action buttons */
+@keyframes firePulse {
+  0%, 100% { box-shadow: 0 0 16px rgba(249, 115, 22, 0.35); }
+  50%       { box-shadow: 0 0 36px rgba(249, 115, 22, 0.65), 0 0 70px rgba(249, 115, 22, 0.20); }
 }
 
 /* Secondary foil sheen */

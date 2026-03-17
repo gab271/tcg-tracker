@@ -219,7 +219,7 @@ export default function HomeContent() {
           >
             <p className="text-gold-500/60 text-[10px] uppercase tracking-[0.25em] font-semibold mb-2">Collection Hierarchy</p>
             <h2 className="font-display text-2xl md:text-3xl font-bold text-white">Every Rarity. Every Game.</h2>
-            <p className="text-gray-600 text-sm mt-2">From bulk commons to PSA-graded secret rares — we track them all</p>
+            <p className="text-gray-400 text-sm mt-2">From bulk commons to PSA-graded secret rares — we track them all</p>
           </motion.div>
 
           <div className="flex flex-wrap justify-center items-end gap-4 lg:gap-6">
@@ -532,11 +532,11 @@ export default function HomeContent() {
                   <svg className="w-full h-full" viewBox="0 0 300 60" preserveAspectRatio="none">
                     <defs>
                       <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#d4af37" stopOpacity="0.3" />
-                        <stop offset="100%" stopColor="#d4af37" stopOpacity="0" />
+                        <stop offset="0%" stopColor="#d4841a" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#d4841a" stopOpacity="0" />
                       </linearGradient>
                     </defs>
-                    <path d="M0,45 C30,42 50,38 80,30 C110,22 130,35 160,28 C190,21 210,15 240,10 C260,7 280,12 300,8" stroke="#d4af37" strokeWidth="1.5" fill="none" />
+                    <path d="M0,45 C30,42 50,38 80,30 C110,22 130,35 160,28 C190,21 210,15 240,10 C260,7 280,12 300,8" stroke="#e8a030" strokeWidth="1.8" fill="none" />
                     <path d="M0,45 C30,42 50,38 80,30 C110,22 130,35 160,28 C190,21 210,15 240,10 C260,7 280,12 300,8 L300,60 L0,60 Z" fill="url(#chartGrad)" />
                   </svg>
                   <div className="absolute top-2 right-2 text-[8px] font-bold text-green-400">+12.4% ↑</div>
@@ -798,14 +798,14 @@ export default function HomeContent() {
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="bg-vault-800/60 border border-gray-800 rounded-2xl p-8 flex flex-col"
+              className="bg-vault-700/70 border border-gray-700/60 rounded-2xl p-8 flex flex-col shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
             >
               <h3 className="font-display text-2xl font-bold text-white mb-1">Basic</h3>
-              <p className="text-gray-500 text-sm mb-6">For casual collectors just getting started.</p>
+              <p className="text-gray-400 text-sm mb-6">For casual collectors just getting started.</p>
               <div className="font-display text-4xl font-bold text-white mb-8">$0<span className="text-lg text-gray-500 font-normal">/mo</span></div>
               <ul className="space-y-3.5 mb-8 flex-grow text-sm">
-                <li className="flex items-center gap-3 text-gray-300"><Check className="text-gray-500 w-4 h-4 shrink-0" /> Up to 100 cards</li>
-                <li className="flex items-center gap-3 text-gray-300"><Check className="text-gray-500 w-4 h-4 shrink-0" /> Basic portfolio tracking</li>
+                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gray-400 w-4 h-4 shrink-0" /> Up to 100 cards</li>
+                <li className="flex items-center gap-3 text-gray-200"><Check className="text-gray-400 w-4 h-4 shrink-0" /> Basic portfolio tracking</li>
                 <li className="flex items-center gap-3 text-gray-500 opacity-45"><Check className="text-gray-700 w-4 h-4 shrink-0" /><span className="line-through">Real-time price alerts</span></li>
                 <li className="flex items-center gap-3 text-gray-500 opacity-45"><Check className="text-gray-700 w-4 h-4 shrink-0" /><span className="line-through">Export to CSV</span></li>
               </ul>
@@ -819,7 +819,7 @@ export default function HomeContent() {
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="bg-gradient-to-b from-amber-950/60 to-vault-800/80 border-2 border-gold-500/60 rounded-2xl p-8 relative shadow-[0_0_40px_rgba(212,175,55,0.12)] flex flex-col md:scale-[1.03]"
+              className="bg-gradient-to-b from-amber-950/70 to-vault-700/90 border-2 border-gold-500/70 rounded-2xl p-8 relative shadow-[0_0_50px_rgba(212,132,26,0.18),0_4px_32px_rgba(0,0,0,0.6)] flex flex-col md:scale-[1.03]"
             >
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gold-500 text-vault-900 font-bold px-4 py-1 rounded-full text-xs tracking-widest uppercase">
                 Most Popular
@@ -834,7 +834,7 @@ export default function HomeContent() {
                 <li className="flex items-center gap-3 text-gray-200"><Check className="text-gold-500 w-4 h-4 shrink-0" /> Export to CSV & PDF</li>
                 <li className="flex items-center gap-3 text-gray-200"><Check className="text-gold-500 w-4 h-4 shrink-0" /> 12-month price history</li>
               </ul>
-              <button className="w-full py-3.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-vault-900 font-bold transition-colors shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] text-sm">
+              <button className="w-full py-3.5 rounded-xl bg-fire-500 hover:bg-fire-400 text-white font-bold transition-all duration-200 shadow-[0_0_24px_rgba(249,115,22,0.35)] hover:shadow-[0_0_40px_rgba(249,115,22,0.6)] text-sm">
                 Upgrade to Pro Vault
               </button>
             </motion.div>
@@ -847,15 +847,15 @@ export default function HomeContent() {
         <div className="absolute inset-0 bg-vault-900" />
         {/* Card-back diamond grid background */}
         <div
-          className="absolute inset-0 opacity-[0.025] pointer-events-none"
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
           style={{
             backgroundImage: `
-              repeating-linear-gradient(-45deg, #d4af37 0, #d4af37 1px, transparent 0, transparent 30px),
-              repeating-linear-gradient( 45deg, #d4af37 0, #d4af37 1px, transparent 0, transparent 30px)
+              repeating-linear-gradient(-45deg, #d4841a 0, #d4841a 1px, transparent 0, transparent 30px),
+              repeating-linear-gradient( 45deg, #d4841a 0, #d4841a 1px, transparent 0, transparent 30px)
             `,
           }}
         />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gold-500/10 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[130px] pointer-events-none" style={{ background: 'radial-gradient(ellipse, rgba(249,115,22,0.12) 0%, rgba(212,132,26,0.06) 50%, transparent 80%)' }} />
 
         {/* Floating card silhouettes */}
         {[
@@ -921,7 +921,7 @@ export default function HomeContent() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="px-10 py-4 rounded-sm bg-gold-500 hover:bg-gold-400 text-vault-900 font-bold text-sm uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_24px_rgba(212,175,55,0.3)] hover:shadow-[0_0_40px_rgba(212,175,55,0.5)] font-display">
+              <button className="px-10 py-4 rounded-sm bg-fire-500 hover:bg-fire-400 text-white font-bold text-sm uppercase tracking-wider transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_28px_rgba(249,115,22,0.4)] hover:shadow-[0_0_50px_rgba(249,115,22,0.65)] font-display">
                 Open Your Vault — Free
               </button>
               <button className="px-10 py-4 rounded-sm border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white font-medium text-sm transition-colors">

@@ -238,9 +238,9 @@ export default function Navbar() {
                 </button>
                 <button
                   onClick={() => { setAuthMode("register"); setIsAuthOpen(true); }}
-                  className="relative group px-5 py-2 rounded-md bg-vault-800 border border-gold-500/30 hover:border-gold-500/60 text-gold-400 text-sm font-medium tracking-wide transition-all duration-200 shadow-[0_0_12px_rgba(249,115,22,0.1)] hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] overflow-hidden"
+                  className="relative group px-5 py-2 rounded-md bg-fire-500/10 border border-fire-500/35 hover:border-fire-500/70 hover:bg-fire-500/20 text-fire-400 text-sm font-medium tracking-wide transition-all duration-200 shadow-[0_0_12px_rgba(249,115,22,0.12)] hover:shadow-[0_0_24px_rgba(249,115,22,0.4)] overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-gold-500/0 via-gold-500/8 to-gold-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-fire-500/0 via-fire-500/10 to-fire-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <span className="relative z-10">Open Vault</span>
                 </button>
               </>
@@ -249,7 +249,7 @@ export default function Navbar() {
 
           {/* ── Mobile Toggle ── */}
           <button
-            className="md:hidden z-50 w-9 h-9 flex items-center justify-center rounded-md border border-gray-800 hover:border-gold-500/30 bg-vault-800/60 text-gray-400 hover:text-gold-400 transition-all"
+            className="md:hidden z-50 w-9 h-9 flex items-center justify-center rounded-md border border-gray-800 hover:border-fire-500/40 bg-vault-800/60 text-gray-400 hover:text-fire-400 transition-all"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -354,7 +354,7 @@ export default function Navbar() {
                     </button>
                     <button
                       onClick={() => { setAuthMode("register"); setIsAuthOpen(true); setMobileMenuOpen(false); }}
-                      className="w-full flex items-center justify-center py-3 rounded-xl bg-gold-500/10 border border-gold-500/30 text-gold-400 font-medium text-sm tracking-wide hover:bg-gold-500/20 transition-colors"
+                      className="w-full flex items-center justify-center py-3 rounded-xl bg-fire-500/10 border border-fire-500/35 text-fire-400 font-medium text-sm tracking-wide hover:bg-fire-500/20 hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-all duration-200"
                     >
                       Open Your Vault
                     </button>

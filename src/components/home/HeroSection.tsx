@@ -64,15 +64,15 @@ export default function HeroSection() {
         <div className="absolute inset-0 bg-vault-900" />
         {/* Diagonal card-back diamond grid */}
         <div
-          className="absolute inset-0 opacity-[0.028]"
+          className="absolute inset-0 opacity-[0.03]"
           style={{
             backgroundImage: `
-              repeating-linear-gradient(-45deg, #d4af37 0, #d4af37 1px, transparent 0, transparent 28px),
-              repeating-linear-gradient( 45deg, #d4af37 0, #d4af37 1px, transparent 0, transparent 28px)
+              repeating-linear-gradient(-45deg, #d4841a 0, #d4841a 1px, transparent 0, transparent 28px),
+              repeating-linear-gradient( 45deg, #d4841a 0, #d4841a 1px, transparent 0, transparent 28px)
             `,
           }}
         />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_40%,rgba(212,175,55,0.08)_0%,rgba(15,17,21,1)_68%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_40%,rgba(212,132,26,0.09)_0%,rgba(6,8,14,1)_68%)]" />
         {/* Game colour orbs */}
         <div className="absolute top-1/3 left-1/4 w-[420px] h-[420px] bg-red-500/5  rounded-full blur-[110px]" />
         <div className="absolute bottom-1/3 right-1/3 w-80  h-80  bg-blue-500/5  rounded-full blur-[85px]" />
@@ -161,7 +161,7 @@ export default function HeroSection() {
           >
             <Link
               href="/signup"
-              className="group inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-gold-500 hover:bg-gold-400 text-vault-900 font-bold rounded-sm transition-all duration-300 shadow-[0_0_24px_rgba(212,175,55,0.3)] hover:shadow-[0_0_36px_rgba(212,175,55,0.5)] text-sm uppercase tracking-wider"
+              className="group inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-fire-500 hover:bg-fire-400 text-white font-bold rounded-sm transition-all duration-300 shadow-[0_0_24px_rgba(249,115,22,0.35)] hover:shadow-[0_0_40px_rgba(249,115,22,0.6)] text-sm uppercase tracking-wider"
             >
               Start for free
               <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
