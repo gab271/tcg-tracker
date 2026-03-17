@@ -14,7 +14,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps) {
   const { username } = await params;
   return {
-    title: `@${username} — TCG Tracker`,
+    title: `@${username} — TCG Multiverse`,
     description: `View ${username}'s public TCG collection and decks.`,
   };
 }

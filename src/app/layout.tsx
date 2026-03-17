@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TCG Tracker | Ultimate Collector's Vault",
-  description: "Track Pokemon, Magic: The Gathering, One Piece, and Yu-Gi-Oh! cards in a luxurious digital vault.",
+  title: "TCG Multiverse | Ultimate Collector's Vault",
+  description: "Track Pokemon, Magic: The Gathering, One Piece, and Yu-Gi-Oh! cards in TCG Multiverse — the ultimate digital vault for collectors.",
 };
 
 export default function RootLayout({

@@ -82,23 +82,17 @@ export default function Navbar() {
 
           {/* ── Logo ── */}
           <Link href="/" className="group flex items-center gap-3 z-50 shrink-0">
-            {/* Logo mark */}
-            <div className="relative w-9 h-9 rounded-lg border border-gold-500/40 bg-vault-800 flex items-center justify-center overflow-hidden shadow-[0_0_12px_rgba(212,175,55,0.15)] group-hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-shadow duration-300">
-              <div className="absolute inset-0 bg-gradient-to-br from-gold-500/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              {/* Stylized card stack icon */}
-              <div className="relative flex flex-col gap-[3px] items-center">
-                <div className="w-4 h-[3px] rounded-sm bg-gold-500/90" />
-                <div className="w-5 h-[3px] rounded-sm bg-gold-400/70" />
-                <div className="w-4 h-[3px] rounded-sm bg-gold-300/50" />
-              </div>
+            {/* Logo image */}
+            <div className="relative w-9 h-9 rounded-lg overflow-hidden shadow-[0_0_12px_rgba(212,175,55,0.15)] group-hover:shadow-[0_0_20px_rgba(212,175,55,0.35)] transition-shadow duration-300 shrink-0">
+              <img src="/logoTcg.png" alt="TCG Multiverse" className="w-full h-full object-cover" />
             </div>
             {/* Wordmark */}
             <div className="hidden sm:flex flex-col leading-none">
               <span className="font-display text-sm font-bold tracking-[0.18em] uppercase text-gold-gradient">
-                TCG Tracker
+                TCG Multiverse
               </span>
               <span className="text-[8px] tracking-[0.3em] uppercase text-gray-600 font-medium">
-                Collector&apos;s Vault
+                Pokémon · YGO · Magic · One Piece
               </span>
             </div>
           </Link>
@@ -294,10 +288,10 @@ export default function Navbar() {
               <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800/60">
                 <div className="flex flex-col leading-none">
                   <span className="font-display text-sm font-bold tracking-[0.15em] uppercase text-gold-gradient">
-                    TCG Tracker
+                    TCG Multiverse
                   </span>
                   <span className="text-[8px] tracking-[0.3em] uppercase text-gray-600 mt-0.5">
-                    Collector&apos;s Vault
+                    Pokémon · YGO · Magic · One Piece
                   </span>
                 </div>
                 <button
