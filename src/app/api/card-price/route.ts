@@ -4,6 +4,14 @@ import { logger } from "@/lib/logger";
 import { getCardPrice } from "@/lib/tcg/prices";
 import { redisGet, redisSet, REDIS_TTL } from "@/lib/redis";
 import { rateLimit } from "@/lib/rate-limit";
+import {
+  getSinglePriceFromDB,
+  upsertPrices,
+  recordPriceHistory,
+  getPriceHistory,
+} from "@/lib/services/price.service";
+import { logCardAccess } from "@/lib/services/catalog.service";
+import type { GameKey } from "@/lib/tcg/types";
 
 // --- Normalize game parameter to canonical keys ---
 function normalizeGame(raw: string): string {
@@ -58,6 +66,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Registrar acceso para que refresh-prices priorice esta carta
+  logCardAccess(cardId, game as GameKey).catch(() => {});
+
   // Layer 1: Redis (1h) — fastest path, zero DB/API calls
   const redisCacheKey = `price:${game}:${cardId}:${currency}`;
   const redisCached = await redisGet<Record<string, unknown>>(redisCacheKey);
@@ -65,7 +76,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ...redisCached, cached: true }, { headers: { "X-Cache": "HIT" } });
   }
 
-  // Layer 2: Supabase cache (1h)
+  // Layer 2: card_prices table (nuevo — precio con TTL soft de 1h + historial real)
+  try {
+    const dbPrice = await getSinglePriceFromDB(cardId, game as GameKey, currency);
+    if (dbPrice) {
+      const history = await getPriceHistory(cardId, game as GameKey, currency, 30);
+      const payload = {
+        currentPrice: dbPrice.price,
+        priceHistory: history,
+        currency: dbPrice.currency,
+        source: dbPrice.source,
+        name: null as string | null,
+        image: null as string | null,
+        cached: true,
+      };
+      await redisSet(redisCacheKey, payload, { ex: REDIS_TTL.PRICE });
+      return NextResponse.json(payload, { headers: { "X-Cache": "DB" } });
+    }
+  } catch (err) {
+    logger.warn("[card-price] card_prices read failed:", err instanceof Error ? err.message : err);
+  }
+
+  // Layer 3: Supabase price_cache (legacy — compatibilidad con código existente)
   try {
     const supabase = createAdminClient();
     const { data: cached } = await supabase
@@ -79,9 +111,13 @@ export async function GET(request: NextRequest) {
     if (cached?.cached_at) {
       const age = Date.now() - new Date(cached.cached_at as string).getTime();
       if (age < 60 * 60 * 1000) {
+        // Leer historial real de price_history en lugar del array legacy
+        const history = await getPriceHistory(cardId, game as GameKey, currency, 30);
         const payload = {
           currentPrice: ((cached.price ?? cached.current_price) as number | null),
-          priceHistory: (cached.price_history as { date: string; price: number }[] | null) ?? [],
+          priceHistory: history.length > 0
+            ? history
+            : ((cached.price_history as { date: string; price: number }[] | null) ?? []),
           currency: (cached.currency as string | null) ?? currency,
           source: cached.source as string | null,
           name: cached.card_name as string | null,
@@ -100,8 +136,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Layer 3: Live fetch via unified prices.ts adapter
-  // prices.ts handles all external API calls, timeouts, and writes back to Supabase cache.
+  // Layer 4: Live fetch via unified prices.ts adapter
+  // prices.ts gestiona todas las llamadas externas, timeouts y escribe en Supabase cache.
   const priceInfo = await getCardPrice(
     game as "pokemon" | "magic" | "yugioh" | "onepiece",
     cardId,
@@ -115,13 +151,28 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Persistir en card_prices y registrar en price_history
+  if (priceInfo?.price != null) {
+    upsertPrices([{
+      externalId: cardId,
+      game: game as GameKey,
+      currency,
+      price: priceInfo.price,
+      priceFoil: null,
+      source: priceInfo.source,
+    }]).catch(() => {});
+
+    recordPriceHistory(cardId, game as GameKey, currency, priceInfo.price, priceInfo.source).catch(() => {});
+  }
+
+  // Leer historial que pueda existir en price_history
+  const history = await getPriceHistory(cardId, game as GameKey, currency, 30);
+
   const payload = {
     currentPrice: priceInfo?.price ?? null,
-    priceHistory: [] as { date: string; price: number }[],
+    priceHistory: history,
     currency: priceInfo?.currency ?? currency,
     source: priceInfo?.source ?? "unavailable",
-    // name/image are populated from Supabase cache on subsequent requests
-    // (writeCache in prices.ts persists card_name and image_url)
     name: null as string | null,
     image: null as string | null,
   };

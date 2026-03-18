@@ -1,12 +1,13 @@
 /**
  * GET /api/cards?game=pokemon|magic|yugioh|onepiece&q=QUERY&page=1&pageSize=20
  *
- * Unified card search endpoint. Routes to the appropriate external API
- * based on the `game` parameter:
- *   pokemon   → PokemonTCG.io
- *   magic     → Scryfall
- *   yugioh    → YGOPRODeck
- *   onepiece  → Bandai official card list
+ * Búsqueda de cartas unificada. Flujo DB-first:
+ *   1. Redis cache (24h)
+ *   2. tcg_cards table — búsqueda fulltext local
+ *   3. Provider externo — fallback on-demand si la DB devuelve vacío
+ *      → guarda los resultados en tcg_cards para la próxima búsqueda
+ *
+ * El frontend nunca sabe si los datos vienen de la DB o del provider.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -16,6 +17,12 @@ import { searchYugiohCards, type YugiohSearchResult } from "@/lib/tcg/yugioh";
 import { searchOnePieceCards, type OnePieceSearchResult } from "@/lib/tcg/onepiece";
 import { redisGet, redisSet, REDIS_TTL } from "@/lib/redis";
 import { rateLimit } from "@/lib/rate-limit";
+import {
+  searchFromDB,
+  upsertCards,
+  logCardAccessBatch,
+} from "@/lib/services/catalog.service";
+import type { GameKey } from "@/lib/tcg/types";
 
 const VALID_GAMES = ["pokemon", "magic", "yugioh", "onepiece"] as const;
 type Game = (typeof VALID_GAMES)[number];
@@ -64,12 +71,31 @@ export async function GET(request: NextRequest) {
   const query = q.trim().toLowerCase();
   const cacheKey = `cards:${game}:${query}:${page}:${pageSize}`;
 
-  // 1. Redis cache — fastest layer
+  // 1. Redis cache — capa más rápida
   const cached = await redisGet<SearchResult>(cacheKey);
   if (cached) {
     return NextResponse.json(cached, { headers: { "X-Cache": "HIT" } });
   }
 
+  // 2. DB-first: buscar en tcg_cards
+  try {
+    const dbResult = await searchFromDB(query, game as GameKey, page, pageSize);
+
+    if (dbResult.total > 0) {
+      // Resultado encontrado en la DB local — registrar acceso para refresh de precios
+      const ids = dbResult.cards.map((c) => c.externalId);
+      await logCardAccessBatch(ids, game as GameKey);
+
+      // Normalizar al formato que espera el frontend (compatible con los adapters existentes)
+      const result = normalizeDBResult(dbResult, game, page, pageSize);
+      await redisSet(cacheKey, result, { ex: REDIS_TTL.SEARCH });
+      return NextResponse.json(result, { headers: { "X-Cache": "DB" } });
+    }
+  } catch {
+    // DB-first falló — continuar con fallback al provider (degradación elegante)
+  }
+
+  // 3. Fallback: provider externo
   try {
     let result: SearchResult;
 
@@ -85,19 +111,78 @@ export async function GET(request: NextRequest) {
     } else if (game === "yugioh") {
       result = await searchYugiohCards(query, page, pageSize);
     } else {
-      // onepiece
       result = await searchOnePieceCards(query, page, pageSize);
     }
 
-    // 2. Cache in Redis (shorter TTL for One Piece since HTML parsing is fragile)
+    // Guardar resultados en DB para futuras búsquedas (enriquecimiento orgánico del catálogo)
+    storeProviderResultsAsync(result, game as GameKey);
+
     const ttl = game === "onepiece" ? REDIS_TTL.PRICE : REDIS_TTL.SEARCH;
     await redisSet(cacheKey, result, { ex: ttl });
 
     return NextResponse.json(result, { headers: { "X-Cache": "MISS" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unexpected error";
-    // Use 503 for timeout/unreachable, 500 for other errors
     const status = message.includes("timed out") || message.includes("unreachable") ? 503 : 500;
     return NextResponse.json({ error: message }, { status });
   }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Normaliza resultados de tcg_cards al formato que espera el frontend.
+ * Mantiene compatibilidad con la forma {cards, page, pageSize, total}.
+ */
+function normalizeDBResult(
+  dbResult: { cards: { externalId: string; name: string; imageSmall: string; rarity: string; typeLine: string }[]; total: number },
+  game: string,
+  page: number,
+  pageSize: number
+) {
+  return {
+    cards: dbResult.cards.map((c) => ({
+      id: c.externalId,
+      name: c.name,
+      imageUrl: c.imageSmall,
+      rarity: c.rarity,
+      typeLine: c.typeLine,
+      game,
+      price: null, // Los precios se cargan por separado en /api/card-price
+    })),
+    page,
+    pageSize,
+    total: dbResult.total,
+  };
+}
+
+/**
+ * Guarda los resultados del provider en tcg_cards de forma asíncrona (fire-and-forget).
+ * No bloquea la respuesta al usuario.
+ */
+function storeProviderResultsAsync(result: SearchResult, game: GameKey): void {
+  const cards = (result as { cards: Array<{ id?: string; name: string; imageUrl?: string; rarity?: string; typeLine?: string }> }).cards ?? [];
+  if (cards.length === 0) return;
+
+  const providerCards = cards.map((c) => ({
+    externalId: c.id ?? "",
+    name: c.name,
+    imageSmall: c.imageUrl ?? "",
+    imageLarge: null,
+    rarity: c.rarity ?? "Unknown",
+    typeLine: c.typeLine ?? "",
+    setExternalId: null,
+    setName: null,
+    number: null,
+    artist: null,
+    raw: c as Record<string, unknown>,
+  })).filter((c) => c.externalId);
+
+  // Fire-and-forget: no await — no bloquea la respuesta
+  upsertCards(providerCards, game).catch(() => {
+    // No crítico — el catálogo se llenará en el siguiente sync
+  });
+
+  // Registrar accesos
+  logCardAccessBatch(providerCards.map((c) => c.externalId), game).catch(() => {});
 }

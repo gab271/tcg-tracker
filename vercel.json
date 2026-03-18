@@ -3,6 +3,26 @@
     {
       "path": "/api/cron/check-alerts",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/refresh-prices",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-pokemon-catalog",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/sync-magic-catalog",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/sync-yugioh-catalog",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/snapshot-portfolio",
+      "schedule": "0 2 * * *"
     }
   ]
 }
