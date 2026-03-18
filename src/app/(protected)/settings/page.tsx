@@ -195,6 +195,28 @@ export default function SettingsPage() {
   // ── Tab state
   const [activeTab, setActiveTab] = useState<TabId>("account");
 
+  // ── Billing: Stripe upgrade
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+
+  const handleUpgrade = async () => {
+    setUpgradeLoading(true);
+    try {
+      const res = await fetch("/api/stripe/checkout", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to create checkout session");
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } catch {
+      toast.error("No se pudo iniciar el pago. Inténtalo de nuevo.");
+    } finally {
+      setUpgradeLoading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    // Redirigir al portal de cliente de Stripe
+    router.push("/pricing");
+  };
+
   // ── Account: password
   const [currentPw,  setCurrentPw]  = useState("");
   const [newPw,      setNewPw]      = useState("");
@@ -995,7 +1017,7 @@ export default function SettingsPage() {
 
                       {plan === "PRO" && (
                         <button
-                          onClick={() => toast.info("Stripe portal coming soon.")}
+                          onClick={handleManageSubscription}
                           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-gray-300 border border-white/10 bg-white/4 hover:bg-white/8 transition-colors"
                         >
                           Manage subscription
@@ -1047,15 +1069,18 @@ export default function SettingsPage() {
                         <motion.button
                           whileHover={{ scale: 1.03 }}
                           whileTap={{ scale: 0.97 }}
-                          onClick={() => toast.info("Stripe checkout coming soon.")}
-                          className="flex items-center gap-2 px-6 py-2.5 font-bold text-sm text-vault-900 rounded-xl transition-all"
+                          onClick={handleUpgrade}
+                          disabled={upgradeLoading}
+                          className="flex items-center gap-2 px-6 py-2.5 font-bold text-sm text-vault-900 rounded-xl transition-all disabled:opacity-60"
                           style={{
                             background: "linear-gradient(135deg, #f6d159, #d4af37)",
                             boxShadow: "0 0 24px rgba(212,175,55,0.3)",
                           }}
                         >
-                          <Zap className="w-3.5 h-3.5" />
-                          Upgrade to Pro
+                          {upgradeLoading
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <Zap className="w-3.5 h-3.5" />}
+                          {upgradeLoading ? "Redirecting…" : "Upgrade to Pro"}
                         </motion.button>
                         <p className="text-xs text-gray-600">€4.99 / month · Cancel anytime</p>
                       </div>

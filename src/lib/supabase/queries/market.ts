@@ -21,6 +21,7 @@ export interface CreateListingInput {
   rarity?: string;
   condition: string;
   price: number;
+  photos?: string[]; // URLs de fotos subidas a Supabase Storage
 }
 
 export async function fetchActiveListings(
@@ -94,6 +95,7 @@ export async function createListing(
       condition: input.condition,
       price: input.price,
       status: "active",
+      photos: input.photos ?? [],
     })
     .select()
     .single();

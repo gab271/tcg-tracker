@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, LogOut, User, Settings, ChevronDown, LayoutDashboard, Library, Layers, TrendingUp } from "lucide-react";
+import { Menu, X, LogOut, User, Settings, ChevronDown, LayoutDashboard, Library, Layers, TrendingUp, Zap, Bell, Check } from "lucide-react";
 import AuthModal from "@/components/auth/AuthModal";
 import { createClient } from "@/lib/supabase/client";
+import { useNotifications } from "@/hooks/use-notifications";
 
 const NAV_LINKS = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -23,7 +24,10 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const { notifications, unreadCount, markAllRead, markRead } = useNotifications();
 
   const pathname = usePathname();
   const supabase = createClient();
@@ -48,11 +52,14 @@ export default function Navbar() {
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
 
-  // Close dropdown on outside click
+  // Cerrar dropdowns al clicar fuera
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setIsDropdownOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setIsNotifOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -149,7 +156,69 @@ export default function Navbar() {
                 <div className="w-28 h-9 bg-vault-700/30 animate-pulse rounded-md" />
               </div>
             ) : user ? (
-              /* User avatar + dropdown */
+              <>
+              {/* Notification bell */}
+              <div className="relative" ref={notifRef}>
+                <button
+                  onClick={() => { setIsNotifOpen(!isNotifOpen); if (!isNotifOpen) markAllRead(); }}
+                  className="relative w-9 h-9 rounded-full border border-gray-800 hover:border-gold-500/30 bg-vault-800/60 hover:bg-vault-800 flex items-center justify-center transition-all"
+                >
+                  <Bell className="w-4 h-4 text-gray-400" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-gold-500 text-vault-900 text-[9px] font-bold flex items-center justify-center">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                <AnimatePresence>
+                  {isNotifOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-80 bg-vault-900 border border-gray-800/80 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50 overflow-hidden"
+                    >
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800/60">
+                        <p className="text-xs font-bold text-white uppercase tracking-wider">Notifications</p>
+                        {notifications.length > 0 && (
+                          <button onClick={markAllRead} className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-gold-400 transition-colors">
+                            <Check className="w-3 h-3" /> Mark all read
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-80 overflow-y-auto divide-y divide-gray-800/40">
+                        {notifications.length === 0 ? (
+                          <div className="py-8 text-center">
+                            <Bell className="w-6 h-6 text-gray-700 mx-auto mb-2" />
+                            <p className="text-xs text-gray-600">No notifications yet</p>
+                          </div>
+                        ) : (
+                          notifications.map((n) => (
+                            <button
+                              key={n.id}
+                              onClick={() => markRead(n.id)}
+                              className="w-full text-left px-4 py-3 hover:bg-vault-800/60 transition-colors flex items-start gap-3"
+                            >
+                              <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${n.read ? "bg-gray-700" : "bg-gold-500"}`} />
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-white truncate">{n.title}</p>
+                                <p className="text-[10px] text-gray-500 mt-0.5 leading-relaxed">{n.message}</p>
+                                <p className="text-[9px] text-gray-700 mt-1">
+                                  {n.createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                </p>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* User avatar + dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -212,6 +281,15 @@ export default function Navbar() {
                           <Settings className="w-3.5 h-3.5 text-gray-500" />
                           Settings
                         </Link>
+                        <Link
+                          href="/pricing"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-sm transition-colors"
+                          style={{ color: "#d4af37" }}
+                        >
+                          <Zap className="w-3.5 h-3.5" style={{ color: "#d4af37" }} />
+                          Upgrade to Pro
+                        </Link>
                       </div>
 
                       <div className="border-t border-gray-800/60 pt-1 pb-0.5">
@@ -227,6 +305,7 @@ export default function Navbar() {
                   )}
                 </AnimatePresence>
               </div>
+              </>
             ) : (
               /* Auth buttons */
               <>

@@ -5,11 +5,13 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import {
   ShoppingBag, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle,
-  Package, AlertTriangle, ChevronRight, Tag,
+  Package, AlertTriangle, ChevronRight, Tag, Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useMyTransactions, useUpdateTransactionStatus } from "@/hooks/use-transactions";
 import { useAuth } from "@/hooks/use-auth";
+import RateSellerModal from "@/components/market/RateSellerModal";
+import SellerRatingBadge from "@/components/market/SellerRatingBadge";
 import type { DbTransaction } from "@/types/database";
 
 const STATUS_CONFIG: Record<
@@ -37,6 +39,8 @@ export default function OrdersPage() {
   const { data: transactions, isLoading } = useMyTransactions();
   const { mutateAsync: updateStatus, isPending: updating } = useUpdateTransactionStatus();
   const [tab, setTab] = useState<TabType>("all");
+  const [ratingTx, setRatingTx] = useState<DbTransaction | null>(null);
+  const [ratedTxIds, setRatedTxIds] = useState<Set<string>>(new Set());
 
   const filtered = (transactions ?? []).filter((t) => {
     if (tab === "purchases") return t.buyer_id === user?.id;
@@ -228,6 +232,32 @@ export default function OrdersPage() {
                           </button>
                         </div>
                       )}
+
+                      {/* Rate seller button — sólo comprador, sólo cuando completado */}
+                      {txn.status === "completed" && isBuyer && !ratedTxIds.has(txn.id) && (
+                        <div className="mt-3 flex items-center gap-3">
+                          <button
+                            onClick={() => setRatingTx(txn)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                            style={{
+                              background: "rgba(212,175,55,0.1)",
+                              border: "1px solid rgba(212,175,55,0.25)",
+                              color: "#d4af37",
+                            }}
+                          >
+                            <Star className="w-3.5 h-3.5" />
+                            Rate Seller
+                          </button>
+                          <SellerRatingBadge sellerId={txn.seller_id} />
+                        </div>
+                      )}
+
+                      {txn.status === "completed" && isBuyer && ratedTxIds.has(txn.id) && (
+                        <div className="mt-3 flex items-center gap-2">
+                          <span className="text-[10px] text-green-400/70">Rating submitted</span>
+                          <SellerRatingBadge sellerId={txn.seller_id} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -236,6 +266,21 @@ export default function OrdersPage() {
           </div>
         )}
       </div>
+
+      {ratingTx && (
+        <RateSellerModal
+          isOpen={!!ratingTx}
+          onClose={() => setRatingTx(null)}
+          transactionId={ratingTx.id}
+          sellerId={ratingTx.seller_id}
+          sellerName={ratingTx.seller_username ?? "Seller"}
+          cardName={ratingTx.card_name}
+          onRated={() => {
+            setRatedTxIds((prev) => new Set([...prev, ratingTx.id]));
+            setRatingTx(null);
+          }}
+        />
+      )}
     </div>
   );
 }

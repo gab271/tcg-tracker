@@ -290,7 +290,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex-1 min-h-[280px]">
-              <ValueChart />
+              <ValueChart range={range} />
             </div>
           </motion.div>
 

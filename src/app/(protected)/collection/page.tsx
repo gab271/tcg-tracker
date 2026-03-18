@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { Search, Loader2, CheckSquare, Square, Trash2, Layers, X, Plus, TrendingUp } from "lucide-react";
+import { Search, Loader2, CheckSquare, Square, Trash2, Layers, X, Plus, TrendingUp, Zap, SlidersHorizontal, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import TiltCard from "@/components/collection/TiltCard";
 import AddCardModal from "@/components/collection/AddCardModal";
@@ -9,6 +10,7 @@ import MoveToDeckModal from "@/components/collection/MoveToDeckModal";
 import { useCollection, useAddCard, useDeleteCardsBatch, useMoveToDeck } from "@/hooks/use-collection";
 import { usePlanLimits } from "@/hooks/use-profile";
 import { useDecks } from "@/hooks/use-decks";
+import { useSetCompletion } from "@/hooks/use-set-completion";
 import type { CardSearchResult } from "@/types/domain";
 import { toast } from "sonner";
 import { mapSupabaseError } from "@/lib/errors";
@@ -21,10 +23,26 @@ const GAME_TABS = [
   { id: "Yu-Gi-Oh!", label: "Yu-Gi-Oh!" },
 ];
 
+type SortKey = "name_asc" | "name_desc" | "price_asc" | "price_desc" | "recent";
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "recent",     label: "Más reciente"  },
+  { value: "price_desc", label: "Mayor precio"  },
+  { value: "price_asc",  label: "Menor precio"  },
+  { value: "name_asc",   label: "Nombre A-Z"    },
+  { value: "name_desc",  label: "Nombre Z-A"    },
+];
+
 export default function CollectionPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeGame, setActiveGame] = useState("All");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // Filtros avanzados
+  const [sortKey, setSortKey] = useState<SortKey>("recent");
+  const [filterRarity, setFilterRarity] = useState<string>("All");
+  const [showFilters, setShowFilters] = useState(false);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
 
   // Selection mode
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -39,10 +57,44 @@ export default function CollectionPage() {
   const deleteBatch = useDeleteCardsBatch();
   const moveToDeck = useMoveToDeck();
   const { canAddCard, isAtCardLimit, limits, usage } = usePlanLimits();
+  const router = useRouter();
+  const { completion: setCompletion } = useSetCompletion(collection, activeGame);
 
-  const filteredCollection = collection.filter((card) =>
-    card.card_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Extraer rarities únicas de la colección actual
+  const rarities = useMemo(() => {
+    const set = new Set(collection.map((c) => c.rarity).filter(Boolean) as string[]);
+    return ["All", ...Array.from(set).sort()];
+  }, [collection]);
+
+  const filteredCollection = useMemo(() => {
+    let result = collection.filter((card) => {
+      if (!card.card_name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      if (filterRarity !== "All" && card.rarity !== filterRarity) return false;
+      if (minPrice && card.price < parseFloat(minPrice)) return false;
+      if (maxPrice && card.price > parseFloat(maxPrice)) return false;
+      return true;
+    });
+
+    // Ordenar
+    result = [...result].sort((a, b) => {
+      switch (sortKey) {
+        case "price_desc": return (b.price ?? 0) - (a.price ?? 0);
+        case "price_asc":  return (a.price ?? 0) - (b.price ?? 0);
+        case "name_asc":   return a.card_name.localeCompare(b.card_name);
+        case "name_desc":  return b.card_name.localeCompare(a.card_name);
+        default:           return 0; // "recent" — mantiene orden de BD (created_at desc)
+      }
+    });
+
+    return result;
+  }, [collection, searchTerm, filterRarity, minPrice, maxPrice, sortKey]);
+
+  const activeFilterCount = [
+    filterRarity !== "All",
+    minPrice !== "",
+    maxPrice !== "",
+    sortKey !== "recent",
+  ].filter(Boolean).length;
 
   // Computed stats
   const stats = useMemo(() => {
@@ -208,10 +260,13 @@ export default function CollectionPage() {
                   <span className="relative z-10">Add Card</span>
                 </button>
                 {isAtCardLimit && (
-                  <p className="text-[10px] text-amber-500/60">
-                    {usage.cards}/{limits.maxCards} ·{" "}
-                    <span className="underline cursor-pointer hover:text-amber-400">Upgrade</span>
-                  </p>
+                  <button
+                    onClick={() => router.push("/pricing")}
+                    className="flex items-center gap-1 text-[10px] text-amber-500/70 hover:text-amber-400 transition-colors"
+                  >
+                    <Zap className="w-2.5 h-2.5" />
+                    {usage.cards}/{limits.maxCards} · Upgrade to Pro
+                  </button>
                 )}
               </div>
             </div>
@@ -221,7 +276,7 @@ export default function CollectionPage() {
 
       <div className="container mx-auto px-6 lg:px-12 py-8 pb-32">
         {/* ── Filters Bar ── */}
-        <div className="flex flex-col lg:flex-row gap-3 mb-8">
+        <div className="flex flex-col lg:flex-row gap-3 mb-4">
           {/* Search */}
           <div className="relative lg:w-80">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
@@ -241,15 +296,13 @@ export default function CollectionPage() {
           </div>
 
           {/* Game Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1">
             {GAME_TABS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveGame(tab.id)}
                 className={`h-10 px-4 rounded-lg text-xs font-bold tracking-wider uppercase whitespace-nowrap transition-all flex-shrink-0 ${
-                  activeGame === tab.id
-                    ? "text-gold-400"
-                    : "text-gray-500 hover:text-gray-300"
+                  activeGame === tab.id ? "text-gold-400" : "text-gray-500 hover:text-gray-300"
                 }`}
                 style={activeGame === tab.id ? {
                   background: "rgba(212,175,55,0.08)",
@@ -263,7 +316,133 @@ export default function CollectionPage() {
               </button>
             ))}
           </div>
+
+          {/* Sort & Filter toggle */}
+          <div className="flex items-center gap-2">
+            {/* Sort dropdown */}
+            <div className="relative">
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                className="h-10 pl-3 pr-8 rounded-lg text-xs font-bold uppercase tracking-wider text-gray-400 appearance-none cursor-pointer outline-none transition-all"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value} className="bg-[#0d0f14]">
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-600 pointer-events-none" />
+            </div>
+
+            {/* Filters toggle */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="h-10 px-3.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 relative"
+              style={showFilters || activeFilterCount > 0 ? {
+                background: "rgba(212,175,55,0.1)",
+                border: "1px solid rgba(212,175,55,0.3)",
+                color: "#d4af37",
+              } : {
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: "#6b7280",
+              }}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gold-500 text-vault-900 text-[9px] font-bold flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* ── Advanced Filters Panel ── */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden mb-5"
+            >
+              <div
+                className="p-4 rounded-xl flex flex-wrap gap-5 items-end"
+                style={{ background: "rgba(212,175,55,0.04)", border: "1px solid rgba(212,175,55,0.12)" }}
+              >
+                {/* Rarity */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2">
+                    Rarity
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rarities.map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => setFilterRarity(r)}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
+                        style={filterRarity === r ? {
+                          background: "rgba(212,175,55,0.15)",
+                          border: "1px solid rgba(212,175,55,0.4)",
+                          color: "#d4af37",
+                        } : {
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.07)",
+                          color: "#6b7280",
+                        }}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Price range */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2">
+                    Price range (€)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      placeholder="Min"
+                      value={minPrice}
+                      onChange={(e) => setMinPrice(e.target.value)}
+                      className="w-20 h-8 px-2 rounded-lg text-xs text-white placeholder:text-gray-700 outline-none"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    />
+                    <span className="text-gray-700 text-xs">–</span>
+                    <input
+                      type="number"
+                      placeholder="Max"
+                      value={maxPrice}
+                      onChange={(e) => setMaxPrice(e.target.value)}
+                      className="w-20 h-8 px-2 rounded-lg text-xs text-white placeholder:text-gray-700 outline-none"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    />
+                  </div>
+                </div>
+
+                {/* Clear */}
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={() => { setFilterRarity("All"); setMinPrice(""); setMaxPrice(""); setSortKey("recent"); }}
+                    className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors uppercase tracking-wider flex items-center gap-1"
+                  >
+                    <X className="w-3 h-3" /> Clear all
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* ── Selection Bar ── */}
         <AnimatePresence>
@@ -292,6 +471,56 @@ export default function CollectionPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* ── Set Completion (Pokémon) ── */}
+        {setCompletion.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 rounded-2xl overflow-hidden"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}
+          >
+            <div className="px-5 py-3 border-b border-white/[0.05] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-4 rounded-full bg-red-500" />
+                <p className="text-xs font-bold text-white uppercase tracking-widest">Set Completion</p>
+                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-950/60 text-red-400 border border-red-800/40">
+                  Pokémon
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-600">{setCompletion.length} set{setCompletion.length !== 1 ? "s" : ""} in progress</p>
+            </div>
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {setCompletion.slice(0, 6).map((s) => (
+                <div key={s.setId} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.025] hover:bg-white/[0.045] transition-colors">
+                  {s.logoUrl && (
+                    <img src={s.logoUrl} alt={s.setName} className="w-8 h-8 object-contain shrink-0 opacity-80" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                      <p className="text-xs font-semibold text-white truncate">{s.setName}</p>
+                      <p className="text-[10px] font-mono text-gray-500 shrink-0">
+                        {s.owned}/{s.total}
+                      </p>
+                    </div>
+                    <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${s.pct}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="h-full rounded-full"
+                        style={{
+                          background: s.pct >= 80 ? "#4ade80" : s.pct >= 50 ? "#facc15" : "#ef4444",
+                        }}
+                      />
+                    </div>
+                    <p className="text-[9px] text-gray-700 mt-1">{s.pct}% complete</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Grid ── */}
         {isLoading ? (

@@ -42,4 +42,16 @@ export const serverEnv = {
   get RESEND_API_KEY() {
     return process.env.RESEND_API_KEY ?? "";
   },
+  get STRIPE_SECRET_KEY() {
+    return required("STRIPE_SECRET_KEY", process.env.STRIPE_SECRET_KEY);
+  },
+  get STRIPE_WEBHOOK_SECRET() {
+    return required("STRIPE_WEBHOOK_SECRET", process.env.STRIPE_WEBHOOK_SECRET);
+  },
+  get STRIPE_PRO_PRICE_ID() {
+    return required("STRIPE_PRO_PRICE_ID", process.env.STRIPE_PRO_PRICE_ID);
+  },
 } as const;
+
+/** Client-safe Stripe key */
+export const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { X, Search, Tag, ChevronDown } from "lucide-react";
+import { X, Search, Tag, ChevronDown, Camera, Loader2 as Spin, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCollection } from "@/hooks/use-collection";
 import { useCreateListing } from "@/hooks/use-market";
 import { useAuth } from "@/hooks/use-auth";
+import { createClient } from "@/lib/supabase/client";
 import type { DbCollection } from "@/types/database";
 
 const CONDITIONS = [
@@ -33,6 +34,12 @@ export default function ListCardModal({ isOpen, onClose }: ListCardModalProps) {
   const [price, setPrice] = useState("");
   const [step, setStep] = useState<"pick" | "details">("pick");
 
+  // Fotos del vendedor
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const supabase = createClient();
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return collection.filter(
@@ -44,6 +51,39 @@ export default function ListCardModal({ isOpen, onClose }: ListCardModalProps) {
     setSelectedCard(card);
     setPrice(card.price > 0 ? card.price.toFixed(2) : "");
     setStep("details");
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (photos.length >= 4) { toast.error("Maximum 4 photos per listing."); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Photo must be under 5 MB."); return; }
+
+    setUploadingPhoto(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("listing-photos")
+        .upload(path, file, { upsert: false });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("listing-photos")
+        .getPublicUrl(path);
+
+      setPhotos((prev) => [...prev, publicUrl]);
+    } catch {
+      toast.error("Failed to upload photo. Make sure the 'listing-photos' bucket exists in Supabase Storage.");
+    } finally {
+      setUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  };
+
+  const removePhoto = (url: string) => {
+    setPhotos((prev) => prev.filter((p) => p !== url));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,6 +108,7 @@ export default function ListCardModal({ isOpen, onClose }: ListCardModalProps) {
         rarity: selectedCard.rarity,
         condition,
         price: priceNum,
+        photos,
       });
       toast.success(`${selectedCard.card_name} listed for €${priceNum.toFixed(2)}`);
       handleClose();
@@ -82,6 +123,7 @@ export default function ListCardModal({ isOpen, onClose }: ListCardModalProps) {
     setSearch("");
     setCondition("near_mint");
     setPrice("");
+    setPhotos([]);
     onClose();
   };
 
@@ -271,6 +313,50 @@ export default function ListCardModal({ isOpen, onClose }: ListCardModalProps) {
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Seller photos */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2.5">
+                      Photos <span className="text-gray-700 font-normal normal-case tracking-normal">(optional · max 4)</span>
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {photos.map((url) => (
+                        <div key={url} className="relative w-16 h-20 rounded-lg overflow-hidden group">
+                          <img src={url} alt="card photo" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(url)}
+                            className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-400" />
+                          </button>
+                        </div>
+                      ))}
+
+                      {photos.length < 4 && (
+                        <button
+                          type="button"
+                          onClick={() => photoInputRef.current?.click()}
+                          disabled={uploadingPhoto}
+                          className="w-16 h-20 rounded-lg border-2 border-dashed border-white/10 hover:border-gold-500/40 flex flex-col items-center justify-center gap-1 transition-colors text-gray-700 hover:text-gray-500 disabled:opacity-50"
+                        >
+                          {uploadingPhoto
+                            ? <Spin className="w-4 h-4 animate-spin" />
+                            : <Camera className="w-4 h-4" />}
+                          <span className="text-[9px] uppercase tracking-wider">
+                            {uploadingPhoto ? "…" : "Add"}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoUpload}
+                    />
                   </div>
 
                   {/* Price input */}
