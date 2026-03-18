@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { User, Layers, Lock, Calendar, ExternalLink } from "lucide-react";
 import type { UserProfileRow } from "@/lib/supabase/queries/public-profile";
-import type { CollectionRow } from "@/lib/supabase/queries/collection";
+import type { DbCollection } from "@/types/database";
 import type { DeckRow } from "@/lib/supabase/queries/decks";
 
 const GAME_BADGE: Record<string, string> = {
@@ -16,7 +16,7 @@ const GAME_BADGE: Record<string, string> = {
 
 interface Props {
   profile: UserProfileRow;
-  collection: CollectionRow[];
+  collection: DbCollection[];
   decks: DeckRow[];
 }
 

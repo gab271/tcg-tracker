@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 import { getCardPrice } from "@/lib/tcg/prices";
 import { redisGet, redisSet, REDIS_TTL } from "@/lib/redis";
+import { rateLimit } from "@/lib/rate-limit";
 
 // --- Normalize game parameter to canonical keys ---
 function normalizeGame(raw: string): string {
@@ -20,6 +21,21 @@ type Currency = (typeof VALID_CURRENCIES)[number];
 
 // GET /api/card-price?cardId=xxx&game=pokemon|magic|yugioh|onepiece&currency=EUR|USD
 export async function GET(request: NextRequest) {
+  const rl = await rateLimit(request, "price");
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down." },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": String(rl.limit),
+          "X-RateLimit-Remaining": "0",
+          "Retry-After": String(Math.ceil((rl.reset - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const cardId = searchParams.get("cardId");
   const rawGame = searchParams.get("game");
@@ -50,8 +66,8 @@ export async function GET(request: NextRequest) {
   }
 
   // Layer 2: Supabase cache (1h)
-  const supabase = createAdminClient();
   try {
+    const supabase = createAdminClient();
     const { data: cached } = await supabase
       .from("price_cache")
       .select("price, current_price, price_history, currency, source, card_name, image_url, cached_at")

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import {
   fetchWishlist,
   addToWishlist,
@@ -8,20 +7,7 @@ import {
 } from "@/lib/supabase/queries/wishlist";
 
 async function getSupabaseUser() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (toSet) =>
-          toSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          ),
-      },
-    }
-  );
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -81,7 +67,7 @@ export async function DELETE(req: NextRequest) {
   if (!itemId) return NextResponse.json({ error: "id is required." }, { status: 400 });
 
   try {
-    await removeFromWishlist(supabase, itemId);
+    await removeFromWishlist(supabase, itemId, user.id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[wishlist DELETE]", err);

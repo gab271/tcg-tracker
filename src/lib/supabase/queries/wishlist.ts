@@ -50,12 +50,14 @@ export async function addToWishlist(
 
 export async function removeFromWishlist(
   supabase: SupabaseClient,
-  wishlistItemId: string
+  wishlistItemId: string,
+  userId: string
 ): Promise<void> {
   const { error } = await supabase
     .from("wishlists")
     .delete()
-    .eq("id", wishlistItemId);
+    .eq("id", wishlistItemId)
+    .eq("user_id", userId);
 
   if (error) throw error;
 }

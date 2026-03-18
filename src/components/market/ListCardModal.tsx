@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useCollection } from "@/hooks/use-collection";
 import { useCreateListing } from "@/hooks/use-market";
 import { useAuth } from "@/hooks/use-auth";
-import type { CollectionRow } from "@/lib/supabase/queries/collection";
+import type { DbCollection } from "@/types/database";
 
 const CONDITIONS = [
   { value: "mint",      label: "Mint",      desc: "Perfect, unplayed",   color: "#22d3ee" },
@@ -28,7 +28,7 @@ export default function ListCardModal({ isOpen, onClose }: ListCardModalProps) {
   const createListing = useCreateListing();
 
   const [search, setSearch] = useState("");
-  const [selectedCard, setSelectedCard] = useState<CollectionRow | null>(null);
+  const [selectedCard, setSelectedCard] = useState<DbCollection | null>(null);
   const [condition, setCondition] = useState("near_mint");
   const [price, setPrice] = useState("");
   const [step, setStep] = useState<"pick" | "details">("pick");
@@ -40,7 +40,7 @@ export default function ListCardModal({ isOpen, onClose }: ListCardModalProps) {
     );
   }, [collection, search]);
 
-  const handleSelectCard = (card: CollectionRow) => {
+  const handleSelectCard = (card: DbCollection) => {
     setSelectedCard(card);
     setPrice(card.price > 0 ? card.price.toFixed(2) : "");
     setStep("details");

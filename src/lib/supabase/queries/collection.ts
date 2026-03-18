@@ -1,24 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DbCollection } from "@/types/database";
 import type { AddCardInput } from "@/lib/validations/collection";
-
-export interface CollectionRow {
-  id: string;
-  user_id: string;
-  card_id: string;
-  card_name: string;
-  card_image: string | null;
-  game: string;
-  rarity: string;
-  price: number;
-  quantity: number;
-  created_at: string;
-}
 
 export async function fetchUserCollection(
   supabase: SupabaseClient,
   userId: string,
   game?: string
-): Promise<CollectionRow[]> {
+): Promise<DbCollection[]> {
   let query = supabase
     .from("collections")
     .select("*")
@@ -38,7 +26,7 @@ export async function addCardToCollection(
   supabase: SupabaseClient,
   userId: string,
   input: AddCardInput
-): Promise<CollectionRow> {
+): Promise<DbCollection> {
   const { data, error } = await supabase
     .from("collections")
     .upsert(

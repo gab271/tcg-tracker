@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { CollectionRow } from "./collection";
+import type { DbCollection } from "@/types/database";
 import type { DeckRow } from "./decks";
 
 export interface UserProfileRow {
@@ -20,7 +20,7 @@ export async function fetchProfileByUsername(
     .from("user_profiles")
     .select("*")
     .eq("username", username.toLowerCase())
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
 
@@ -38,7 +38,7 @@ export async function fetchProfileByUsername(
 export async function fetchPublicCollection(
   supabase: SupabaseClient,
   userId: string
-): Promise<CollectionRow[]> {
+): Promise<DbCollection[]> {
   const { data, error } = await supabase
     .from("collections")
     .select("*")
@@ -96,7 +96,7 @@ export async function fetchOwnProfile(
     .from("user_profiles")
     .select("*")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
 

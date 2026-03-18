@@ -49,12 +49,14 @@ export async function createAlert(
 
 export async function deleteAlert(
   supabase: SupabaseClient,
-  alertId: string
+  alertId: string,
+  userId: string
 ): Promise<void> {
   const { error } = await supabase
     .from("price_alerts")
     .delete()
-    .eq("id", alertId);
+    .eq("id", alertId)
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
@@ -62,12 +64,14 @@ export async function deleteAlert(
 export async function toggleAlert(
   supabase: SupabaseClient,
   alertId: string,
-  isActive: boolean
+  isActive: boolean,
+  userId: string
 ): Promise<void> {
   const { error } = await supabase
     .from("price_alerts")
     .update({ is_active: isActive })
-    .eq("id", alertId);
+    .eq("id", alertId)
+    .eq("user_id", userId);
 
   if (error) throw error;
 }

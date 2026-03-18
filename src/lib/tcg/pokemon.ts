@@ -82,7 +82,11 @@ async function fetchWithTimeout(url: string, options: RequestInit): Promise<Resp
     return await fetch(url, { ...options, signal: controller.signal });
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
-      throw new Error("PokemonTCG API timed out");
+      // Timeout frecuente cuando se agota el límite de la API sin clave (1000 req/día).
+      // Solución: añadir POKEMONTCG_API_KEY en .env.local
+      throw new Error(
+        "PokemonTCG API no respondió. Verifica que POKEMONTCG_API_KEY esté configurada en .env.local (límite gratuito: 1000 req/día)."
+      );
     }
     throw new Error(`PokemonTCG API unreachable: ${err instanceof Error ? err.message : err}`);
   } finally {

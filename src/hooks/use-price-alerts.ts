@@ -45,7 +45,10 @@ export function useDeleteAlert() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: (alertId: string) => deleteAlert(supabase, alertId),
+    mutationFn: (alertId: string) => {
+      if (!user) throw new Error("Not authenticated");
+      return deleteAlert(supabase, alertId, user.id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["price-alerts", user?.id] });
     },
@@ -58,8 +61,10 @@ export function useToggleAlert() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: ({ alertId, isActive }: { alertId: string; isActive: boolean }) =>
-      toggleAlert(supabase, alertId, isActive),
+    mutationFn: ({ alertId, isActive }: { alertId: string; isActive: boolean }) => {
+      if (!user) throw new Error("Not authenticated");
+      return toggleAlert(supabase, alertId, isActive, user.id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["price-alerts", user?.id] });
     },

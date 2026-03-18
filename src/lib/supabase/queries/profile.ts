@@ -17,12 +17,19 @@ export async function fetchUserProfile(supabase: SupabaseClient): Promise<Profil
   const meta = user.user_metadata ?? {};
   const created = new Date(user.created_at);
 
+  // Read plan from user_profiles DB (not user_metadata — that is user-editable)
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("plan")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   return {
     id: user.id,
     email: user.email ?? "",
     displayName: meta.display_name ?? meta.full_name ?? user.email?.split("@")[0] ?? "User",
     avatarUrl: meta.avatar_url ?? null,
-    plan: (meta.plan as "FREE" | "PRO") ?? "FREE",
+    plan: (profile?.plan as "FREE" | "PRO") ?? "FREE",
     memberSince: created.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
   };
 }

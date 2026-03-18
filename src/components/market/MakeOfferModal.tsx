@@ -30,7 +30,6 @@ export default function MakeOfferModal({ listing, open, onClose }: MakeOfferModa
     try {
       await makeOffer({
         listingId: listing.id,
-        sellerId: listing.seller_id,
         offeredPrice: offerNum,
         message: message.trim() || undefined,
       });

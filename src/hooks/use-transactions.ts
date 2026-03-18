@@ -5,10 +5,12 @@ import { createClient } from "@/lib/supabase/client";
 import {
   fetchUserTransactions,
   updateTransactionStatus,
+} from "@/lib/supabase/queries/transactions";
+import {
   fetchMyOffers,
   fetchOffersForListing,
   withdrawOffer,
-} from "@/lib/supabase/queries/transactions";
+} from "@/lib/supabase/queries/offers";
 import { useAuth } from "./use-auth";
 import type { DbTransaction } from "@/types/database";
 
@@ -81,12 +83,10 @@ export function useMakeOffer() {
   return useMutation({
     mutationFn: async ({
       listingId,
-      sellerId,
       offeredPrice,
       message,
     }: {
       listingId: string;
-      sellerId: string;
       offeredPrice: number;
       message?: string;
     }) => {
@@ -95,7 +95,7 @@ export function useMakeOffer() {
       const res = await fetch("/api/market/offer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId, sellerId, offeredPrice, message }),
+        body: JSON.stringify({ listingId, offeredPrice, message }),
       });
 
       const json = await res.json();

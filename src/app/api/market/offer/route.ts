@@ -1,24 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import { createOffer } from "@/lib/supabase/queries/transactions";
+import { createClient } from "@/lib/supabase/server";
+import { createOffer } from "@/lib/supabase/queries/offers";
 
 export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (toSet) =>
-          toSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          ),
-      },
-    }
-  );
+  const supabase = await createClient();
 
   const {
     data: { user },
@@ -30,7 +15,6 @@ export async function POST(req: NextRequest) {
 
   let body: {
     listingId?: string;
-    sellerId?: string;
     offeredPrice?: number;
     message?: string;
   };
@@ -40,26 +24,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { listingId, sellerId, offeredPrice, message } = body;
+  const { listingId, offeredPrice, message } = body;
 
-  if (!listingId || !sellerId || !offeredPrice || offeredPrice <= 0) {
+  if (!listingId || !offeredPrice || offeredPrice <= 0) {
     return NextResponse.json(
-      { error: "listingId, sellerId and offeredPrice (> 0) are required." },
+      { error: "listingId and offeredPrice (> 0) are required." },
       { status: 400 }
     );
   }
 
-  if (sellerId === user.id) {
-    return NextResponse.json(
-      { error: "You cannot make an offer on your own listing." },
-      { status: 403 }
-    );
-  }
-
-  // Verify listing is still active
+  // Verify listing is still active and fetch the real seller_id from the server
+  // (never trust the client for sellerId — it can be forged to bypass self-offer checks)
   const { data: listing } = await supabase
     .from("market_listings")
-    .select("id, status")
+    .select("id, status, seller_id")
     .eq("id", listingId)
     .eq("status", "active")
     .maybeSingle();
@@ -68,6 +46,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: "This listing is no longer available." },
       { status: 409 }
+    );
+  }
+
+  const sellerId = listing.seller_id;
+
+  if (sellerId === user.id) {
+    return NextResponse.json(
+      { error: "You cannot make an offer on your own listing." },
+      { status: 403 }
     );
   }
 

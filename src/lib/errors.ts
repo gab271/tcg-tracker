@@ -38,6 +38,17 @@ export function mapSupabaseError(error: unknown): string {
     return "Too many requests. Please wait a moment and try again.";
   }
 
+  // Plan limit errors (raised by DB triggers in migration 011)
+  if (message.includes("plan_limit_cards")) {
+    return "Free plan limit: 100 cards. Upgrade to Pro for unlimited.";
+  }
+  if (message.includes("plan_limit_decks")) {
+    return "Free plan limit: 3 decks. Upgrade to Pro for unlimited.";
+  }
+  if (message.includes("plan_limit_listings")) {
+    return "Free plan limit: 5 active listings. Upgrade to Pro for unlimited.";
+  }
+
   // Database errors
   if (code === "23505" || message.includes("duplicate key")) {
     return "This record already exists.";

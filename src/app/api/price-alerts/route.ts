@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import {
   fetchUserAlerts,
   createAlert,
@@ -9,20 +8,7 @@ import {
 } from "@/lib/supabase/queries/price-alerts";
 
 async function getSupabaseUser() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (toSet) =>
-          toSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          ),
-      },
-    }
-  );
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -93,7 +79,7 @@ export async function DELETE(req: NextRequest) {
   if (!alertId) return NextResponse.json({ error: "id is required." }, { status: 400 });
 
   try {
-    await deleteAlert(supabase, alertId);
+    await deleteAlert(supabase, alertId, user.id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[price-alerts DELETE]", err);
@@ -118,7 +104,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
-    await toggleAlert(supabase, alertId, isActive);
+    await toggleAlert(supabase, alertId, isActive, user.id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[price-alerts PATCH]", err);

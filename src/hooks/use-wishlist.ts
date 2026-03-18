@@ -61,8 +61,10 @@ export function useRemoveFromWishlist() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: ({ itemId }: { itemId: string; cardId: string }) =>
-      removeFromWishlist(supabase, itemId),
+    mutationFn: ({ itemId }: { itemId: string; cardId: string }) => {
+      if (!user) throw new Error("Not authenticated");
+      return removeFromWishlist(supabase, itemId, user.id);
+    },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["wishlist", user?.id] });
       queryClient.invalidateQueries({

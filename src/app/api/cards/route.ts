@@ -15,12 +15,28 @@ import { searchMagicCards, isScryfallError, type MagicSearchResult } from "@/lib
 import { searchYugiohCards, type YugiohSearchResult } from "@/lib/tcg/yugioh";
 import { searchOnePieceCards, type OnePieceSearchResult } from "@/lib/tcg/onepiece";
 import { redisGet, redisSet, REDIS_TTL } from "@/lib/redis";
+import { rateLimit } from "@/lib/rate-limit";
 
 const VALID_GAMES = ["pokemon", "magic", "yugioh", "onepiece"] as const;
 type Game = (typeof VALID_GAMES)[number];
 type SearchResult = PokemonSearchResult | MagicSearchResult | YugiohSearchResult | OnePieceSearchResult;
 
 export async function GET(request: NextRequest) {
+  const rl = await rateLimit(request, "cards");
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down." },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": String(rl.limit),
+          "X-RateLimit-Remaining": "0",
+          "Retry-After": String(Math.ceil((rl.reset - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
 
   const game = searchParams.get("game")?.toLowerCase() as Game | null;
